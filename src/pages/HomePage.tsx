@@ -7,10 +7,12 @@ import ContentGrid from "@/components/ContentGrid";
 import { useFeaturedContent } from "@/services/archiveApi";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Film, Music, Sparkles } from "lucide-react";
+import { useAuth } from "@/providers/AuthProvider";
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("featured");
+  const { isAuthenticated } = useAuth();
   
   const featuredContent = useFeaturedContent("all", 8);
   const featuredMovies = useFeaturedContent("movies", 8);
@@ -41,24 +43,18 @@ const HomePage = () => {
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden px-6 pt-20 md:pt-16">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-background z-10"></div>
-        
         <motion.div 
-          className="absolute inset-0 opacity-30 dark:opacity-20"
+          className="absolute inset-0 opacity-70 dark:opacity-40"
           initial={{ scale: 1.1, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.3 }}
+          animate={{ scale: 1, opacity: 0.7 }}
           transition={{ duration: 1.5 }}
         >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-md z-0"></div>
-          <video 
-            autoPlay 
-            loop 
-            muted 
-            playsInline
-            className="object-cover w-full h-full"
-          >
-            <source src="https://archive.org/download/archival_videos_act2/archival_videos_act2_512kb.mp4" type="video/mp4" />
-          </video>
+          <img 
+            src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000" 
+            alt="Archive background" 
+            className="object-cover w-full h-full object-right-top"
+          />
         </motion.div>
         
         <div className="container mx-auto relative z-20 max-w-4xl text-center">
@@ -83,6 +79,30 @@ const HomePage = () => {
             <motion.div variants={itemVariants}>
               <SearchBar onSearch={handleSearch} className="mb-4" />
             </motion.div>
+
+            {!isAuthenticated && (
+              <motion.div 
+                variants={itemVariants}
+                className="mt-8"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/signup")}
+                  className="bg-white text-black px-6 py-3 rounded-full font-medium mx-2 hover:bg-white/90 transition-colors"
+                >
+                  Get Started
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/login")}
+                  className="bg-transparent text-white border border-white/30 px-6 py-3 rounded-full font-medium mx-2 hover:bg-white/10 transition-colors"
+                >
+                  Sign In
+                </motion.button>
+              </motion.div>
+            )}
           </motion.div>
         </div>
       </section>

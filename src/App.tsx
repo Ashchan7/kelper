@@ -1,49 +1,116 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEffect } from "react";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
 
+// Pages
 import HomePage from "./pages/HomePage";
 import MoviesPage from "./pages/MoviesPage";
 import MusicPage from "./pages/MusicPage";
-import FavoritesPage from "./pages/FavoritesPage";
 import AboutPage from "./pages/AboutPage";
-import Layout from "./components/Layout";
+import FavoritesPage from "./pages/FavoritesPage";
+import PlayerPage from "./pages/PlayerPage";
+import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
-import NotFound from "./pages/NotFound";
-import AuthProvider from "./providers/AuthProvider";
 
+// Components & Layout
+import Layout from "./components/Layout";
+import { ThemeProvider } from "./components/theme-provider";
+import AuthProvider from "./providers/AuthProvider";
+import { Toaster } from "./components/ui/toaster";
+
+// Initialize React Query
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" storageKey="kelper-theme">
+const router = createBrowserRouter([
+  {
+    element: <Layout />,
+    children: [
+      {
+        path: "/",
+        element: <HomePage />,
+      },
+      {
+        path: "/movies",
+        element: <MoviesPage />,
+      },
+      {
+        path: "/music",
+        element: <MusicPage />,
+      },
+      {
+        path: "/favorites",
+        element: <FavoritesPage />,
+      },
+      {
+        path: "/about",
+        element: <AboutPage />,
+      },
+      {
+        path: "/play/:mediaType/:id",
+        element: <PlayerPage />,
+      },
+      {
+        path: "/login",
+        element: <LoginPage />,
+      },
+      {
+        path: "/signup",
+        element: <SignupPage />,
+      },
+      {
+        path: "*",
+        element: <NotFound />,
+      },
+    ],
+  },
+]);
+
+function App() {
+  // Set page background color based on theme
+  useEffect(() => {
+    const updateBackgroundColor = () => {
+      const isDarkMode = document.documentElement.classList.contains("dark");
+      document.body.style.backgroundColor = isDarkMode ? "#000000" : "#ffffff";
+    };
+
+    // Initial update
+    updateBackgroundColor();
+
+    // Create observer to detect theme changes
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "class"
+        ) {
+          updateBackgroundColor();
+        }
+      });
+    });
+
+    // Start observing
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <ThemeProvider defaultTheme="dark">
       <AuthProvider>
-        <TooltipProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
           <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<HomePage />} />
-                <Route path="movies" element={<MoviesPage />} />
-                <Route path="music" element={<MusicPage />} />
-                <Route path="favorites" element={<FavoritesPage />} />
-                <Route path="about" element={<AboutPage />} />
-                <Route path="login" element={<LoginPage />} />
-                <Route path="signup" element={<SignupPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        </QueryClientProvider>
       </AuthProvider>
     </ThemeProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;

@@ -28,13 +28,6 @@ const SearchBar = ({ onSearch, placeholder = "Search for movies, music...", clas
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      style={{
-        backgroundImage: "url('https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1000')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        borderRadius: "1rem",
-        padding: "1rem",
-      }}
     >
       <div className="relative w-full glass">
         <Input

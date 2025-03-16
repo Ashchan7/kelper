@@ -1,144 +1,126 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { getItemImageUrl, getItemPageUrl, ArchiveItem } from "@/services/archiveApi";
-import { Play, Music, ExternalLink, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Heart } from "lucide-react";
+import { useFavorites } from "@/services/favoritesService";
+import { useAuth } from "@/providers/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 interface ContentCardProps {
-  item: ArchiveItem;
-  index: number;
+  id: string;
+  title: string;
+  creator?: string;
+  description?: string;
+  mediaType: string;
+  thumbnailUrl: string;
+  showFavoriteButton?: boolean;
+  isFavorite?: boolean;
 }
 
-const ContentCard = ({ item, index }: ContentCardProps) => {
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
+const ContentCard = ({
+  id,
+  title,
+  creator,
+  description,
+  mediaType,
+  thumbnailUrl,
+  showFavoriteButton = true,
+  isFavorite: initialIsFavorite = false,
+}: ContentCardProps) => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { add, remove, check } = useFavorites();
+  const [isFavorite, setIsFavorite] = useState(initialIsFavorite || check(id));
+  const { toast } = useToast();
   
-  const toggleFavorite = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFavorite(!isFavorite);
-    // In a real app, you would update the favorites in a database or local storage
+  const handleCardClick = () => {
+    navigate(`/play/${mediaType}/${id}`);
   };
   
-  const imageUrl = item.thumb ? item.thumb : getItemImageUrl(item.identifier);
-  const archiveUrl = getItemPageUrl(item.identifier);
-  
-  const isMovie = item.mediatype === "movies";
-  const isAudio = item.mediatype === "audio";
-  
-  // Format date if available
-  const formattedDate = item.date 
-    ? new Date(item.date).getFullYear() 
-    : item.year 
-    ? item.year
-    : "";
-
-  // Internal player URL
-  const playerUrl = isMovie 
-    ? `/movies/${item.identifier}/play` 
-    : isAudio 
-    ? `/music/${item.identifier}/play`
-    : archiveUrl;
-
-  // For non-Movie/Audio content, still link to archive.org
-  const isExternalLink = !isMovie && !isAudio;
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save favorites",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (isFavorite) {
+      remove(id);
+      setIsFavorite(false);
+      toast({
+        title: "Removed from favorites",
+        description: "Item removed from your favorites",
+      });
+    } else {
+      add({
+        id,
+        title,
+        creator: creator || "Unknown",
+        description: description || "",
+        mediaType,
+        thumbnail: thumbnailUrl,
+        url: `/play/${mediaType}/${id}`,
+      });
+      setIsFavorite(true);
+      toast({
+        title: "Added to favorites",
+        description: "Item added to your favorites",
+      });
+    }
+  };
+
   return (
-    <motion.div 
-      className="group relative rounded-xl overflow-hidden bg-white/5 dark:bg-black/20 backdrop-blur-sm border border-white/10 dark:border-white/5 hover:border-white/20 dark:hover:border-white/10 transition-all duration-300"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+    <motion.div
+      className="bg-white/5 dark:bg-black/20 backdrop-blur-sm hover:bg-white/10 dark:hover:bg-black/30 border border-white/10 dark:border-white/5 rounded-xl overflow-hidden cursor-pointer group transition-all duration-300"
       whileHover={{ y: -5 }}
+      onClick={handleCardClick}
     >
-      <Link 
-        to={isExternalLink ? archiveUrl : playerUrl}
-        target={isExternalLink ? "_blank" : "_self"}
-        rel={isExternalLink ? "noopener noreferrer" : ""}
-        state={{ mediaType: item.mediatype }}
-        className="block"
-      >
-        <div className="relative aspect-[4/3] overflow-hidden">
-          {!isImageLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-              <div className="w-8 h-8 border-2 border-black/20 dark:border-white/20 border-t-black dark:border-t-white rounded-full animate-spin"></div>
-            </div>
-          )}
-          <img 
-            src={imageUrl} 
-            alt={item.title} 
-            className={`w-full h-full object-cover transition-all duration-500 ${
-              isImageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-110"
-            }`}
-            onLoad={() => setIsImageLoaded(true)}
-            onError={(e) => {
-              // If image fails to load, set a placeholder
-              e.currentTarget.src = "https://placehold.co/600x400/gray/white?text=No+Image";
-              setIsImageLoaded(true);
-            }}
-          />
-          
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Button variant="outline" className="rounded-full bg-black/20 backdrop-blur-md border-white/20 text-white">
-              {isMovie && <Play className="w-5 h-5 mr-2" />}
-              {isAudio && <Music className="w-5 h-5 mr-2" />}
-              {!isMovie && !isAudio && <ExternalLink className="w-5 h-5 mr-2" />}
-              {isExternalLink ? "View on Archive" : "Play Now"}
-            </Button>
-          </div>
-          
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={`absolute top-2 right-2 rounded-full ${
+      <div className="relative aspect-video">
+        <img
+          src={thumbnailUrl || "/placeholder.svg"}
+          alt={title}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = "/placeholder.svg";
+          }}
+        />
+        
+        {showFavoriteButton && (
+          <button
+            onClick={handleFavoriteClick}
+            className={`absolute top-2 right-2 p-2 rounded-full backdrop-blur-md ${
               isFavorite 
-                ? "bg-white/10 text-red-500" 
-                : "bg-black/20 text-white/70 opacity-0 group-hover:opacity-100"
-            } backdrop-blur-md border-white/20 transition-all duration-300`}
-            onClick={toggleFavorite}
+                ? "bg-white/20 text-red-500" 
+                : "bg-black/20 text-white/70 hover:text-white"
+            } transition-all duration-300`}
           >
             <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500" : ""}`} />
-          </Button>
-          
-          {item.mediatype && (
-            <Badge 
-              variant="secondary" 
-              className="absolute bottom-2 left-2 text-xs font-medium capitalize bg-black/30 text-white border-none backdrop-blur-md"
-            >
-              {item.mediatype}
-            </Badge>
-          )}
-          
-          {formattedDate && (
-            <Badge 
-              variant="secondary" 
-              className="absolute bottom-2 right-2 text-xs font-medium bg-black/30 text-white border-none backdrop-blur-md"
-            >
-              {formattedDate}
-            </Badge>
-          )}
-        </div>
-        
-        <div className="p-4">
-          <h3 className="font-medium line-clamp-1 mb-1">{item.title}</h3>
-          
-          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[40px]">
-            {item.description ? item.description : "No description available"}
+          </button>
+        )}
+      </div>
+      
+      <div className="p-4">
+        <h3 className="text-base font-medium line-clamp-1 mb-1">{title}</h3>
+        {creator && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mb-2">
+            {creator}
           </p>
-          
-          {item.creator && (
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-500 font-medium">
-              By {item.creator}
-            </p>
-          )}
+        )}
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs px-2 py-1 rounded-full bg-white/10 dark:bg-white/5 backdrop-blur-sm">
+            {mediaType === "movies" ? "Movie" : mediaType === "audio" ? "Music" : mediaType}
+          </span>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 };

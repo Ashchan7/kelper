@@ -1,18 +1,21 @@
 
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "./theme-provider";
-import { Search, Sun, Moon, Menu, X } from "lucide-react";
+import { Search, Sun, Moon, Menu, X, ChevronRight, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "@/providers/AuthProvider";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+  const { isAuthenticated, logout, user } = useAuth();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +35,12 @@ const Navbar = () => {
   }, [location.pathname]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setIsMenuOpen(false);
+  };
 
   return (
     <motion.header
@@ -120,56 +129,77 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Menu */}
-      {isMenuOpen && (
-        <motion.div
-          className="md:hidden fixed inset-0 top-[73px] bg-white dark:bg-black z-40 p-6"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="flex flex-col gap-6">
-            <MobileNavLink to="/" label="Home" onClick={() => setIsMenuOpen(false)} />
-            <MobileNavLink to="/movies" label="Movies" onClick={() => setIsMenuOpen(false)} />
-            <MobileNavLink to="/music" label="Music" onClick={() => setIsMenuOpen(false)} />
-            <MobileNavLink to="/favorites" label="Favorites" onClick={() => setIsMenuOpen(false)} />
-            <MobileNavLink to="/about" label="About" onClick={() => setIsMenuOpen(false)} />
-            
-            <div className="border-t border-gray-200 dark:border-gray-800 pt-6 mt-2">
-              {isAuthenticated ? (
-                <Button 
-                  variant="default" 
-                  onClick={() => {
-                    logout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full justify-center"
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            className="md:hidden fixed inset-0 top-[73px] bg-white/90 dark:bg-black/90 backdrop-blur-xl z-40 p-6"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex flex-col gap-6">
+              {isAuthenticated && (
+                <motion.div 
+                  className="glass p-4 rounded-xl mb-4"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  Logout
-                </Button>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <Link to="/login" className="w-full" onClick={() => setIsMenuOpen(false)}>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-center"
-                    >
-                      Login
-                    </Button>
-                  </Link>
-                  <Link to="/signup" className="w-full" onClick={() => setIsMenuOpen(false)}>
-                    <Button 
-                      className="w-full justify-center"
-                    >
-                      Sign up
-                    </Button>
-                  </Link>
-                </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-xl font-medium">
+                      {user?.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{user?.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{user?.email}</p>
+                    </div>
+                  </div>
+                </motion.div>
               )}
+              
+              <div className="space-y-1">
+                <MobileNavLink to="/" label="Home" icon={<Home className="w-5 h-5" />} onClick={() => setIsMenuOpen(false)} />
+                <MobileNavLink to="/movies" label="Movies" icon={<Film className="w-5 h-5" />} onClick={() => setIsMenuOpen(false)} />
+                <MobileNavLink to="/music" label="Music" icon={<Music className="w-5 h-5" />} onClick={() => setIsMenuOpen(false)} />
+                <MobileNavLink to="/favorites" label="Favorites" icon={<Heart className="w-5 h-5" />} onClick={() => setIsMenuOpen(false)} />
+                <MobileNavLink to="/about" label="About" icon={<Info className="w-5 h-5" />} onClick={() => setIsMenuOpen(false)} />
+              </div>
+              
+              <div className="border-t border-gray-200 dark:border-gray-800 pt-6 mt-2">
+                {isAuthenticated ? (
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleLogout}
+                    className="w-full justify-start py-3 rounded-xl"
+                  >
+                    <LogOut className="w-5 h-5 mr-3" />
+                    Logout
+                  </Button>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <Link to="/login" className="w-full" onClick={() => setIsMenuOpen(false)}>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-center rounded-xl"
+                      >
+                        Login
+                      </Button>
+                    </Link>
+                    <Link to="/signup" className="w-full" onClick={() => setIsMenuOpen(false)}>
+                      <Button 
+                        className="w-full justify-center rounded-xl"
+                      >
+                        Sign up
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 };
@@ -202,11 +232,13 @@ const NavLink = ({ to, label }: { to: string; label: string }) => {
 
 const MobileNavLink = ({ 
   to, 
-  label, 
+  label,
+  icon,
   onClick 
 }: { 
   to: string; 
   label: string;
+  icon: React.ReactNode;
   onClick: () => void;
 }) => {
   const location = useLocation();
@@ -217,13 +249,17 @@ const MobileNavLink = ({
     <Link
       to={to}
       onClick={onClick}
-      className={`text-xl font-medium transition-colors ${
+      className={`flex items-center justify-between p-3 rounded-xl transition-colors ${
         isActive 
-          ? "text-black dark:text-white" 
-          : "text-gray-600 dark:text-gray-400"
+          ? "bg-black text-white dark:bg-white dark:text-black" 
+          : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50"
       }`}
     >
-      {label}
+      <div className="flex items-center gap-3">
+        {icon}
+        <span className="font-medium">{label}</span>
+      </div>
+      <ChevronRight className="w-5 h-5" />
     </Link>
   );
 };

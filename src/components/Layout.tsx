@@ -1,13 +1,20 @@
 
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { motion } from "framer-motion";
 
 const Layout = () => {
+  const location = useLocation();
+  
+  // Check if we're on a player page
+  const isPlayerPage = location.pathname.includes('/play');
+  
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
-      <Navbar />
+      {/* Only show Navbar if not on player page */}
+      {!isPlayerPage && <Navbar />}
+      
       <motion.main
         className="flex-grow"
         initial={{ opacity: 0, y: 20 }}
@@ -17,7 +24,9 @@ const Layout = () => {
       >
         <Outlet />
       </motion.main>
-      <Footer />
+      
+      {/* Only show Footer if not on player page */}
+      {!isPlayerPage && <Footer />}
     </div>
   );
 };

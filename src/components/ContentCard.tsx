@@ -37,6 +37,16 @@ const ContentCard = ({ item, index }: ContentCardProps) => {
     ? item.year
     : "";
 
+  // Internal player URL
+  const playerUrl = isMovie 
+    ? `/movies/${item.identifier}/play` 
+    : isAudio 
+    ? `/music/${item.identifier}/play`
+    : archiveUrl;
+
+  // For non-Movie/Audio content, still link to archive.org
+  const isExternalLink = !isMovie && !isAudio;
+    
   return (
     <motion.div 
       className="group relative rounded-xl overflow-hidden bg-white/5 dark:bg-black/20 backdrop-blur-sm border border-white/10 dark:border-white/5 hover:border-white/20 dark:hover:border-white/10 transition-all duration-300"
@@ -45,7 +55,13 @@ const ContentCard = ({ item, index }: ContentCardProps) => {
       transition={{ duration: 0.4, delay: index * 0.05 }}
       whileHover={{ y: -5 }}
     >
-      <Link to={archiveUrl} target="_blank" rel="noopener noreferrer" className="block">
+      <Link 
+        to={isExternalLink ? archiveUrl : playerUrl}
+        target={isExternalLink ? "_blank" : "_self"}
+        rel={isExternalLink ? "noopener noreferrer" : ""}
+        state={{ mediaType: item.mediatype }}
+        className="block"
+      >
         <div className="relative aspect-[4/3] overflow-hidden">
           {!isImageLoaded && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
@@ -73,7 +89,7 @@ const ContentCard = ({ item, index }: ContentCardProps) => {
               {isMovie && <Play className="w-5 h-5 mr-2" />}
               {isAudio && <Music className="w-5 h-5 mr-2" />}
               {!isMovie && !isAudio && <ExternalLink className="w-5 h-5 mr-2" />}
-              View
+              {isExternalLink ? "View on Archive" : "Play Now"}
             </Button>
           </div>
           

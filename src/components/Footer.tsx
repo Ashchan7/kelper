@@ -8,12 +8,12 @@ const Footer = () => {
     <footer className="mt-auto w-full">
       {/* Quick Links - Mobile */}
       <motion.div 
-        className="fixed bottom-0 left-0 right-0 md:hidden z-40"
+        className="fixed bottom-4 left-0 right-0 md:hidden z-40 px-4"
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <div className="glass-darker py-4 px-6 mx-auto flex justify-between items-center">
+        <div className="glass-darker py-4 px-6 mx-auto flex justify-between items-center rounded-2xl">
           <QuickLink to="/" icon={<Home className="w-5 h-5" />} label="Home" />
           <QuickLink to="/movies" icon={<Film className="w-5 h-5" />} label="Movies" />
           <QuickLink to="/music" icon={<Music className="w-5 h-5" />} label="Music" />

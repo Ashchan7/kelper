@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Github, Twitter, Linkedin, Heart } from "lucide-react";
+import { Mail, Github, Twitter, Linkedin, Heart, Home, Film, Music, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Footer = () => {
@@ -11,6 +11,14 @@ const Footer = () => {
   return (
     <footer className="w-full border-t border-border/40 bg-background/80 backdrop-blur-md">
       <div className="container px-6 py-12 mx-auto">
+        {/* Quick Links Section */}
+        <div className="flex flex-wrap justify-center gap-8 mb-10 pb-10 border-b border-border/40">
+          <QuickLink to="/" icon={<Home className="w-4 h-4" />} label="Home" />
+          <QuickLink to="/movies" icon={<Film className="w-4 h-4" />} label="Movies" />
+          <QuickLink to="/music" icon={<Music className="w-4 h-4" />} label="Music" />
+          <QuickLink to="/about" icon={<Info className="w-4 h-4" />} label="About" />
+        </div>
+
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {/* Brand Section */}
           <div className="flex flex-col">
@@ -108,6 +116,23 @@ const Footer = () => {
         </div>
       </div>
     </footer>
+  );
+};
+
+// Quick Link component to make the top navigation items consistent
+const QuickLink = ({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) => {
+  return (
+    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+      <Link 
+        to={to} 
+        className="flex flex-col items-center gap-2 p-3 rounded-md hover:bg-secondary/50 transition-colors"
+      >
+        <div className="p-3 rounded-md bg-primary/10 text-primary">
+          {icon}
+        </div>
+        <span className="text-sm font-medium">{label}</span>
+      </Link>
+    </motion.div>
   );
 };
 

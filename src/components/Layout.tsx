@@ -8,13 +8,12 @@ import { motion } from "framer-motion";
 const Layout = () => {
   const location = useLocation();
   
-  // Only hide navbar on play pages, show on all other pages
-  const isPlayerPage = location.pathname.includes('/play/');
+  // Remove the isPlayerPage logic for Navbar, so it always shows
   
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
-      {/* Show Navbar on all pages except player page */}
-      <Navbar className={isPlayerPage ? "hidden" : ""} />
+      {/* Show Navbar on all pages */}
+      <Navbar />
       
       <motion.main
         className="flex-grow"
@@ -26,8 +25,8 @@ const Layout = () => {
         <Outlet />
       </motion.main>
       
-      {/* Add the QuickLinks component */}
-      {!isPlayerPage && <QuickLinks />}
+      {/* Add the QuickLinks component for mobile devices */}
+      <QuickLinks />
       
       {/* Footer should always be visible */}
       <Footer />

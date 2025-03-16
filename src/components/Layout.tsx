@@ -2,6 +2,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import QuickLinks from "./QuickLinks";
 import { motion } from "framer-motion";
 
 const Layout = () => {
@@ -24,6 +25,9 @@ const Layout = () => {
       >
         <Outlet />
       </motion.main>
+      
+      {/* Add the QuickLinks component */}
+      {!isPlayerPage && <QuickLinks />}
       
       {/* Footer should always be visible */}
       <Footer />

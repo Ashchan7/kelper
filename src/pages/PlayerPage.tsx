@@ -40,20 +40,27 @@ const PlayerPage = () => {
         
         console.log("All files:", files);
         
-        // Filter media files based on media type with more permissive formats
+        // More inclusive file detection - accept more formats and be more permissive
         const suitableFiles = files.filter((file: any) => {
-          const name = file.name?.toLowerCase() || '';
+          if (!file || !file.name) return false;
+          
+          const name = file.name.toLowerCase();
+          const format = (file.format || '').toLowerCase();
           
           if (mediaType === 'movies') {
             return (
-              (name.endsWith('.mp4') || 
-               name.endsWith('.webm') || 
-               name.endsWith('.mov') ||
-               name.endsWith('.avi') ||
-               name.endsWith('.mkv') ||
-               name.includes('video')) && 
-              !name.includes('sample') && 
-              !name.includes('trailer')
+              name.endsWith('.mp4') || 
+              name.endsWith('.webm') || 
+              name.endsWith('.mov') ||
+              name.endsWith('.avi') ||
+              name.endsWith('.mkv') ||
+              name.endsWith('.ogv') ||
+              name.endsWith('.m4v') ||
+              format.includes('video') ||
+              name.includes('video') ||
+              // Accept more file types that might be video
+              name.includes('movie') ||
+              name.includes('film')
             );
           } else if (mediaType === 'audio') {
             return (
@@ -62,7 +69,11 @@ const PlayerPage = () => {
               name.endsWith('.wav') || 
               name.endsWith('.flac') ||
               name.endsWith('.m4a') ||
-              name.includes('audio')
+              name.endsWith('.aac') ||
+              format.includes('audio') ||
+              name.includes('audio') ||
+              name.includes('sound') ||
+              name.includes('track')
             );
           }
           
@@ -72,24 +83,36 @@ const PlayerPage = () => {
         console.log("Suitable files:", suitableFiles);
         
         if (suitableFiles.length === 0) {
-          // Fallback to any file that might be playable
+          // If no suitable files found, try to find ANY file that might be playable
+          // Be very permissive here to catch anything that could be media
           const fallbackFiles = files.filter((file: any) => {
-            const name = file.name?.toLowerCase() || '';
-            const format = file.format?.toLowerCase() || '';
+            if (!file || !file.name) return false;
             
-            return format.includes('video') || 
-                   format.includes('audio') || 
-                   name.includes('video') || 
-                   name.includes('audio');
+            const name = file.name.toLowerCase();
+            const format = (file.format || '').toLowerCase();
+            
+            // Accept any file that remotely looks like it could be media
+            return name.includes('video') || 
+                  name.includes('audio') || 
+                  name.includes('media') ||
+                  name.includes('mp') ||
+                  format.includes('video') || 
+                  format.includes('audio') ||
+                  // These are common extensions
+                  /\.(mp4|webm|mov|avi|mkv|ogv|mp3|ogg|wav|flac|m4a)$/i.test(name);
           });
           
           console.log("Fallback files:", fallbackFiles);
-          setMediaFiles(fallbackFiles.length > 0 ? fallbackFiles : files.slice(0, 5));
           
-          if (fallbackFiles.length === 0) {
+          if (fallbackFiles.length > 0) {
+            setMediaFiles(fallbackFiles);
+          } else {
+            // Last resort: just take the first 5 files of any type
+            setMediaFiles(files.slice(0, 5));
+            
             toast({
               title: "Limited playback support",
-              description: "We couldn't find optimal media files. Some content may not play correctly.",
+              description: "We couldn't find optimal media files. Try viewing the content on Archive.org directly.",
               variant: "destructive"
             });
           }
@@ -130,11 +153,18 @@ const PlayerPage = () => {
     }));
   };
   
-  // Get the main video file for the movie player
+  // Get the main video file for the movie player with improved detection
   const getMainVideoFile = () => {
     if (!mediaFiles.length || mediaType !== 'movies') return null;
     
-    // Sort by size (typically the largest file is the main movie)
+    // First try to find a file with a standard video extension
+    const standardVideo = mediaFiles.find(file => 
+      file.name.toLowerCase().match(/\.(mp4|webm|mov)$/i)
+    );
+    
+    if (standardVideo) return standardVideo;
+    
+    // If no standard video found, sort by size (typically the largest file is the main movie)
     const sortedFiles = [...mediaFiles].sort((a, b) => (b.size || 0) - (a.size || 0));
     
     return sortedFiles[0];

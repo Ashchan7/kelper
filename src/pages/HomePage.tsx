@@ -36,7 +36,9 @@ const HomePage = () => {
   };
 
   const handleSearch = (query: string) => {
-    navigate(`/search?q=${encodeURIComponent(query)}`);
+    // Directly navigate to either movies or music page with search query
+    // This fixes the 404 error by ensuring we navigate to an existing route
+    navigate(`/movies?q=${encodeURIComponent(query)}`);
   };
 
   return (

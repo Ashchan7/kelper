@@ -25,8 +25,8 @@ const Layout = () => {
         <Outlet />
       </motion.main>
       
-      {/* Only show Footer if not on player page */}
-      {!isPlayerPage && <Footer />}
+      {/* Footer should always be visible */}
+      <Footer />
     </div>
   );
 };

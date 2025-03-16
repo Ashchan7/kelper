@@ -63,7 +63,7 @@ p + p {
   border-radius: 0.25rem;
 }
 
-/* Consistent glass effect */
+/* Consistent glass effect - improved for better performance */
 .glass {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -74,6 +74,17 @@ p + p {
 .dark .glass {
   background-color: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* HTML content should always be properly rendered */
+.html-content p, .html-content a, .html-content div {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.html-content a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
 }
 
 /* Additional mobile optimizations */

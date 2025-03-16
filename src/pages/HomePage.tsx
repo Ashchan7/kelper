@@ -166,6 +166,9 @@ const HomePage = () => {
           </TabsContent>
         </Tabs>
       </section>
+      
+      {/* Add bottom padding to account for the QuickLinks component on mobile */}
+      <div className="md:hidden h-24"></div>
     </div>
   );
 };

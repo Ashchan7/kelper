@@ -95,6 +95,9 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
       setError(null);
 
       try {
+        // Generate a random seed for each request to ensure we get different results each time
+        const randomSeed = Math.floor(Math.random() * 1000000);
+        
         // For featured content, we'll use a specific search that sorts by downloads
         let searchQuery = "downloads:[10000 TO 100000000]";
         
@@ -105,7 +108,7 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
         
         const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(
           searchQuery
-        )}&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=downloads desc`;
+        )}&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=random&seed=${randomSeed}`;
 
         const response = await fetch(url);
         

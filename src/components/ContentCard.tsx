@@ -66,21 +66,48 @@ const ContentCard = ({
     }
   };
 
+  // Card hover animation variants
+  const cardVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.4, 
+        delay: index * 0.05
+      }
+    },
+    hover: { 
+      y: -8,
+      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+      transition: { duration: 0.3 }
+    }
+  };
+
+  // Image animation variants
+  const imageVariants = {
+    hover: { 
+      scale: 1.05,
+      transition: { duration: 0.5 }
+    }
+  };
+
   return (
     <motion.div
-      className="bg-white/5 dark:bg-black/20 backdrop-blur-sm hover:bg-white/10 dark:hover:bg-black/30 border border-white/10 dark:border-white/5 rounded-xl overflow-hidden cursor-pointer group transition-all duration-300"
-      whileHover={{ y: -5 }}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+      className="neo-card overflow-hidden cursor-pointer group"
+      variants={cardVariants}
+      initial="initial"
+      animate="animate"
+      whileHover="hover"
       onClick={handleCardClick}
     >
-      <div className="relative aspect-video">
-        <img
+      <div className="relative aspect-video overflow-hidden">
+        <motion.img
           src={item.thumb || `https://archive.org/services/img/${item.identifier}`}
           alt={item.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover"
           loading="lazy"
+          variants={imageVariants}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = "/placeholder.svg";
@@ -88,21 +115,33 @@ const ContentCard = ({
         />
         
         {showFavoriteButton && (
-          <button
+          <motion.button
             onClick={handleFavoriteClick}
-            className={`absolute top-2 right-2 p-2 rounded-full backdrop-blur-md ${
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className={`absolute top-2 right-2 p-2 rounded-full glass-darker ${
               isFavorite 
                 ? "bg-white/20 text-red-500" 
                 : "bg-black/20 text-white/70 hover:text-white"
             } transition-all duration-300`}
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
           >
             <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500" : ""}`} />
-          </button>
+          </motion.button>
         )}
+        
+        {/* Media type badge */}
+        <div className="absolute bottom-2 left-2">
+          <span className="text-xs px-3 py-1 rounded-full glass-darker text-white backdrop-blur-md">
+            {item.mediatype === "movies" ? "Movie" : item.mediatype === "audio" ? "Music" : item.mediatype}
+          </span>
+        </div>
       </div>
       
       <div className="p-4">
-        <h3 className="text-base font-medium line-clamp-1 mb-1">{item.title}</h3>
+        <h3 className="text-base font-medium line-clamp-1 mb-1 group-hover:text-black dark:group-hover:text-white transition-colors">
+          {item.title}
+        </h3>
         {item.creator && (
           <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mb-2">
             {item.creator}
@@ -110,8 +149,8 @@ const ContentCard = ({
         )}
         
         <div className="flex items-center justify-between">
-          <span className="text-xs px-2 py-1 rounded-full bg-white/10 dark:bg-white/5 backdrop-blur-sm">
-            {item.mediatype === "movies" ? "Movie" : item.mediatype === "audio" ? "Music" : item.mediatype}
+          <span className="text-xs px-2 py-1 rounded-full bg-black/5 dark:bg-white/5">
+            {new Date(item.date).getFullYear() || "Unknown year"}
           </span>
         </div>
       </div>

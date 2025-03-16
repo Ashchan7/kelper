@@ -2,43 +2,44 @@
 import { useTheme } from "./theme-provider";
 import { Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();
   
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
-
   return (
-    <motion.button
+    <motion.div
+      whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      onClick={toggleTheme}
-      className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors relative"
-      aria-label="Toggle theme"
+      className="relative"
     >
-      <div className="relative w-5 h-5">
-        {theme === "dark" ? (
-          <motion.div
-            initial={{ opacity: 0, rotate: -90 }}
-            animate={{ opacity: 1, rotate: 0 }}
-            exit={{ opacity: 0, rotate: 90 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Sun className="w-5 h-5" />
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, rotate: 90 }}
-            animate={{ opacity: 1, rotate: 0 }}
-            exit={{ opacity: 0, rotate: -90 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Moon className="w-5 h-5" />
-          </motion.div>
-        )}
-      </div>
-    </motion.button>
+      <ToggleGroup
+        type="single"
+        value={theme}
+        onValueChange={(value) => {
+          if (value) setTheme(value as "light" | "dark" | "system");
+        }}
+        className="glass-darker rounded-full p-1"
+      >
+        <ToggleGroupItem 
+          value="light" 
+          className={`rounded-full p-2 ${theme === 'light' ? 'bg-white/20 text-black dark:text-white' : ''}`}
+          aria-label="Light mode"
+        >
+          <Sun className="h-4 w-4" />
+          <span className="sr-only">Light</span>
+        </ToggleGroupItem>
+        
+        <ToggleGroupItem 
+          value="dark" 
+          className={`rounded-full p-2 ${theme === 'dark' ? 'bg-black/20 text-white dark:text-white' : ''}`}
+          aria-label="Dark mode"
+        >
+          <Moon className="h-4 w-4" />
+          <span className="sr-only">Dark</span>
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </motion.div>
   );
 };
 

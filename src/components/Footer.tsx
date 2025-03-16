@@ -1,9 +1,11 @@
 
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Film, Music, Heart, Info } from "lucide-react";
+import { Home, Film, Music, Heart, Info, Mail, Globe, Twitter, Instagram, Youtube, Github } from "lucide-react";
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+  
   return (
     <footer className="mt-auto w-full">
       {/* Quick Links - Mobile */}
@@ -13,7 +15,7 @@ const Footer = () => {
         animate={{ y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <div className="glass-darker py-4 px-6 mx-auto flex justify-between items-center rounded-2xl">
+        <div className="glass-darker py-4 px-6 mx-auto flex justify-between items-center rounded-full">
           <QuickLink to="/" icon={<Home className="w-5 h-5" />} label="Home" />
           <QuickLink to="/movies" icon={<Film className="w-5 h-5" />} label="Movies" />
           <QuickLink to="/music" icon={<Music className="w-5 h-5" />} label="Music" />
@@ -23,7 +25,7 @@ const Footer = () => {
       </motion.div>
 
       {/* Footer content - Desktop */}
-      <div className="hidden md:block glass-darker mt-20 py-12 border-t border-gray-200 dark:border-gray-800">
+      <div className="hidden md:block glass mt-20 py-12 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-6 md:px-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
             <div className="space-y-4">
@@ -31,6 +33,12 @@ const Footer = () => {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Discover movies and music from the Internet Archive, beautifully presented and easy to access.
               </p>
+              <div className="flex space-x-4 pt-2">
+                <SocialLink href="https://twitter.com" icon={<Twitter className="w-4 h-4" />} label="Twitter" />
+                <SocialLink href="https://instagram.com" icon={<Instagram className="w-4 h-4" />} label="Instagram" />
+                <SocialLink href="https://youtube.com" icon={<Youtube className="w-4 h-4" />} label="YouTube" />
+                <SocialLink href="https://github.com" icon={<Github className="w-4 h-4" />} label="GitHub" />
+              </div>
             </div>
             
             <div>
@@ -53,16 +61,35 @@ const Footer = () => {
             </div>
             
             <div>
-              <h4 className="font-medium mb-4">Legal</h4>
-              <div className="space-y-2">
-                <FooterLink to="/privacy" label="Privacy Policy" />
-                <FooterLink to="/terms" label="Terms of Service" />
+              <h4 className="font-medium mb-4">Contact</h4>
+              <div className="space-y-3">
+                <a href="mailto:contact@kelper.app" className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                  <Mail className="w-4 h-4 mr-2" />
+                  contact@kelper.app
+                </a>
+                <a href="https://kelper.app" target="_blank" rel="noopener noreferrer" className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                  <Globe className="w-4 h-4 mr-2" />
+                  kelper.app
+                </a>
+              </div>
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  123 Archive Street<br />
+                  Digital City, DC 10101
+                </p>
               </div>
             </div>
           </div>
           
-          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 text-sm text-gray-600 dark:text-gray-400">
-            <p>© {new Date().getFullYear()} Kelper. All rights reserved.</p>
+          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              © {currentYear} Kelper. All rights reserved.
+            </p>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              <FooterLink to="/terms" label="Terms of Service" />
+              <FooterLink to="/privacy" label="Privacy Policy" />
+              <FooterLink to="/cookies" label="Cookie Policy" />
+            </div>
           </div>
         </div>
       </div>
@@ -90,6 +117,20 @@ const FooterLink = ({ to, label }: { to: string; label: string }) => {
     >
       {label}
     </Link>
+  );
+};
+
+const SocialLink = ({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) => {
+  return (
+    <a 
+      href={href} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="p-2 rounded-full bg-black/5 dark:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+      aria-label={label}
+    >
+      {icon}
+    </a>
   );
 };
 

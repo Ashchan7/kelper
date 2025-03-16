@@ -80,6 +80,10 @@
   html {
     @apply scroll-smooth;
   }
+  
+  ::selection {
+    @apply bg-black/10 dark:bg-white/20;
+  }
 }
 
 @layer utilities {
@@ -89,6 +93,18 @@
 
   .glass-darker {
     @apply backdrop-blur-xl bg-black/10 dark:bg-black/40 border border-white/20 dark:border-white/10;
+  }
+  
+  .neo-card {
+    @apply bg-white dark:bg-black/40 rounded-xl border border-white/20 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.25)];
+  }
+  
+  .apple-button {
+    @apply rounded-full bg-black dark:bg-white text-white dark:text-black font-medium px-5 py-2 transition-all hover:bg-black/90 dark:hover:bg-white/90 active:scale-95;
+  }
+  
+  .apple-button-secondary {
+    @apply rounded-full border border-black dark:border-white font-medium px-5 py-2 transition-all hover:bg-black/5 dark:hover:bg-white/10 active:scale-95;
   }
 
   .text-balance {
@@ -104,5 +120,59 @@
   .no-scrollbar {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
+  }
+  
+  /* SEO and accessibility improvements */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  }
+  
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white focus-visible:ring-offset-2;
+  }
+}
+
+/* Enhanced animations */
+@keyframes subtle-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.float-animation {
+  animation: subtle-float 4s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.pulse-animation {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+/* Modern gradient animations */
+.gradient-animation {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }

@@ -25,6 +25,13 @@ const FavoritesPage = () => {
       });
       navigate("/login");
     }
+    
+    // Add metadata for SEO
+    document.title = "Your Favorites | Kelper";
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'View and manage your favorite movies and music from the Internet Archive');
+    }
   }, [isAuthenticated, navigate, toast]);
   
   // If not authenticated, don't render the content
@@ -54,30 +61,36 @@ const FavoritesPage = () => {
           transition={{ duration: 0.5 }}
         >
           <div className="flex items-center justify-center mb-8">
-            <Heart className="w-6 h-6 mr-2 text-red-500" />
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-3 rounded-full bg-red-50 dark:bg-red-950/30 text-red-500 mr-3"
+            >
+              <Heart className="w-6 h-6" />
+            </motion.div>
             <h1 className="text-3xl font-medium">Your Favorites</h1>
           </div>
           
           {favorites.length === 0 && !isLoading ? (
-            <div className="text-center py-20">
-              <motion.div
+            <div className="text-center py-20 neo-card p-10">
+              <motion.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5 }}
-                className="mb-6 inline-block p-4 rounded-full bg-gray-100 dark:bg-gray-800"
+                className="mb-6 inline-block p-6 rounded-full bg-gray-100 dark:bg-gray-800 float-animation"
               >
-                <Heart className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                <Heart className="w-14 h-14 text-gray-400 dark:text-gray-500" />
               </motion.div>
-              <h2 className="text-2xl font-medium mb-2">No favorites yet</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-8">
-                Start exploring and add movies or music to your favorites.
+              <h2 className="text-2xl font-medium mb-3">No favorites yet</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+                Start exploring and add movies or music to your favorites collection.
               </p>
-              <div className="flex justify-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate("/movies")}
-                  className="px-6 py-2 rounded-full bg-black text-white dark:bg-white dark:text-black font-medium"
+                  className="apple-button"
                 >
                   Explore Movies
                 </motion.button>
@@ -85,7 +98,7 @@ const FavoritesPage = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate("/music")}
-                  className="px-6 py-2 rounded-full border border-black dark:border-white font-medium"
+                  className="apple-button-secondary"
                 >
                   Explore Music
                 </motion.button>

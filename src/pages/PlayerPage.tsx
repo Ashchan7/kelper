@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import MoviePlayer from "@/components/MoviePlayer";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Info, Heart, ExternalLink, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 const PlayerPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,11 +17,12 @@ const PlayerPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const { toast } = useToast();
   
   // Check if we're dealing with a movie or audio
   const mediaType = location.state?.mediaType || 
                   (location.pathname.includes('/movies/') ? 'movies' : 
-                   location.pathname.includes('/music/') ? 'audio' : null);
+                   location.pathname.includes('/music/') ? 'audio' : 'movies'); // Default to movies if none specified
   
   useEffect(() => {
     if (!id) return;
@@ -37,15 +38,20 @@ const PlayerPage = () => {
         // Get suitable files for playback
         const files: any[] = data.files || [];
         
-        // Filter media files based on media type
+        console.log("All files:", files);
+        
+        // Filter media files based on media type with more permissive formats
         const suitableFiles = files.filter((file: any) => {
-          const name = file.name.toLowerCase();
+          const name = file.name?.toLowerCase() || '';
           
           if (mediaType === 'movies') {
             return (
               (name.endsWith('.mp4') || 
                name.endsWith('.webm') || 
-               name.endsWith('.mov')) && 
+               name.endsWith('.mov') ||
+               name.endsWith('.avi') ||
+               name.endsWith('.mkv') ||
+               name.includes('video')) && 
               !name.includes('sample') && 
               !name.includes('trailer')
             );
@@ -54,24 +60,57 @@ const PlayerPage = () => {
               name.endsWith('.mp3') || 
               name.endsWith('.ogg') || 
               name.endsWith('.wav') || 
-              name.endsWith('.flac')
+              name.endsWith('.flac') ||
+              name.endsWith('.m4a') ||
+              name.includes('audio')
             );
           }
           
           return false;
         });
         
-        setMediaFiles(suitableFiles);
+        console.log("Suitable files:", suitableFiles);
+        
+        if (suitableFiles.length === 0) {
+          // Fallback to any file that might be playable
+          const fallbackFiles = files.filter((file: any) => {
+            const name = file.name?.toLowerCase() || '';
+            const format = file.format?.toLowerCase() || '';
+            
+            return format.includes('video') || 
+                   format.includes('audio') || 
+                   name.includes('video') || 
+                   name.includes('audio');
+          });
+          
+          console.log("Fallback files:", fallbackFiles);
+          setMediaFiles(fallbackFiles.length > 0 ? fallbackFiles : files.slice(0, 5));
+          
+          if (fallbackFiles.length === 0) {
+            toast({
+              title: "Limited playback support",
+              description: "We couldn't find optimal media files. Some content may not play correctly.",
+              variant: "destructive"
+            });
+          }
+        } else {
+          setMediaFiles(suitableFiles);
+        }
       } catch (err) {
         console.error("Error fetching item details:", err);
         setError("Failed to load media details. Please try again later.");
+        toast({
+          title: "Error loading media",
+          description: "There was a problem loading the media. Please try another item.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchDetails();
-  }, [id, mediaType]);
+  }, [id, mediaType, toast]);
   
   const toggleFavorite = () => {
     setIsFavorite(!isFavorite);
@@ -168,7 +207,7 @@ const PlayerPage = () => {
           </Button>
           
           <h1 className="text-2xl font-medium text-center flex-1 mx-4">
-            {itemDetails.title}
+            {itemDetails?.title || "Media Player"}
           </h1>
           
           <Button 
@@ -188,19 +227,32 @@ const PlayerPage = () => {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          {mediaType === 'movies' && mainVideoFile ? (
+          {isLoading ? (
+            <Skeleton className="w-full aspect-video rounded-xl" />
+          ) : mediaType === 'movies' && mainVideoFile ? (
             <MoviePlayer 
               src={`https://archive.org/download/${id}/${encodeURIComponent(mainVideoFile.name)}`}
-              title={itemDetails.title}
+              title={itemDetails?.title || ""}
               poster={`https://archive.org/services/img/${id}`}
             />
           ) : mediaType === 'audio' && audioTracks.length > 0 ? (
             <MusicPlayer tracks={audioTracks} />
           ) : (
-            <div className="w-full aspect-video bg-black/10 dark:bg-white/5 rounded-xl flex items-center justify-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                No playable media found
+            <div className="w-full aspect-video bg-black/10 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center p-6">
+              <p className="text-gray-500 dark:text-gray-400 mb-4 text-center">
+                No playable media found. The archive may not have streamable content.
               </p>
+              <Button asChild variant="outline">
+                <a 
+                  href={`https://archive.org/details/${id}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View on Archive.org
+                </a>
+              </Button>
             </div>
           )}
         </motion.div>

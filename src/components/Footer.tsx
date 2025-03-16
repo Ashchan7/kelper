@@ -17,7 +17,7 @@ const Footer = () => {
             <Link to="/" className="flex items-center mb-4">
               <span className="text-2xl font-medium relative mr-1">
                 Kelper
-                <span className="absolute -top-1 -right-2 w-1.5 h-1.5 bg-black dark:bg-white rounded-full"></span>
+                <span className="absolute -top-1 -right-2 w-1.5 h-1.5 bg-black dark:bg-white rounded-sm"></span>
               </span>
             </Link>
             <p className="max-w-xs text-sm text-muted-foreground">
@@ -31,7 +31,7 @@ const Footer = () => {
                 href="https://twitter.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-full p-2 border border-border/50 hover:bg-secondary transition-colors"
+                className="rounded-md p-2 border border-border/50 hover:bg-secondary transition-colors"
                 aria-label="Twitter"
               >
                 <Twitter className="w-4 h-4" />
@@ -42,7 +42,7 @@ const Footer = () => {
                 href="https://github.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-full p-2 border border-border/50 hover:bg-secondary transition-colors"
+                className="rounded-md p-2 border border-border/50 hover:bg-secondary transition-colors"
                 aria-label="GitHub"
               >
                 <Github className="w-4 h-4" />
@@ -53,7 +53,7 @@ const Footer = () => {
                 href="https://linkedin.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-full p-2 border border-border/50 hover:bg-secondary transition-colors"
+                className="rounded-md p-2 border border-border/50 hover:bg-secondary transition-colors"
                 aria-label="LinkedIn"
               >
                 <Linkedin className="w-4 h-4" />

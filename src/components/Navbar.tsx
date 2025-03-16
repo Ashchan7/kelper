@@ -9,7 +9,11 @@ import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const Navbar = () => {
+interface NavbarProps {
+  className?: string;
+}
+
+const Navbar = ({ className = "" }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
@@ -48,7 +52,7 @@ const Navbar = () => {
         isScrolled || isMenuOpen
           ? "bg-white/80 dark:bg-black/80 backdrop-blur-lg py-4"
           : "bg-transparent py-6"
-      }`}
+      } ${className}`}
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -132,7 +136,7 @@ const Navbar = () => {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            className="md:hidden fixed inset-0 top-[73px] bg-white/90 dark:bg-black/90 backdrop-blur-xl z-40 p-6"
+            className="md:hidden fixed inset-0 top-[73px] bg-white/80 dark:bg-black/80 backdrop-blur-xl z-40 p-6"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}

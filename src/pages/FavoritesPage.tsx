@@ -6,7 +6,8 @@ import { Heart } from "lucide-react";
 import ContentGrid from "@/components/ContentGrid";
 import { useFavorites } from "@/services/favoritesService";
 import { useAuth } from "@/providers/AuthProvider";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { ArchiveItem } from "@/services/archiveApi";
 
 const FavoritesPage = () => {
   const { favorites, isLoading } = useFavorites();
@@ -30,6 +31,19 @@ const FavoritesPage = () => {
   if (!isAuthenticated) {
     return null;
   }
+  
+  // Convert favorites to ArchiveItem format for ContentGrid
+  const favoriteItems: ArchiveItem[] = favorites.map(item => ({
+    identifier: item.id,
+    title: item.title,
+    creator: item.creator,
+    description: item.description,
+    mediatype: item.mediaType,
+    thumb: item.thumbnail,
+    collection: [], // Required field
+    date: new Date(item.addedAt).toISOString(), // Required field
+    publicdate: new Date(item.addedAt).toISOString(), // Required field
+  }));
   
   return (
     <div className="min-h-screen pt-24 pb-20">
@@ -79,18 +93,9 @@ const FavoritesPage = () => {
             </div>
           ) : (
             <ContentGrid
-              items={favorites.map(item => ({
-                identifier: item.id,
-                title: item.title,
-                creator: item.creator,
-                description: item.description,
-                mediatype: item.mediaType,
-                thumbnailUrl: item.thumbnail,
-                dateAdded: new Date(item.addedAt).toISOString(),
-                isFavorite: true,
-              }))}
+              items={favoriteItems}
               isLoading={isLoading}
-              showFavoriteButton={true}
+              title="Your Favorite Items"
             />
           )}
         </motion.div>

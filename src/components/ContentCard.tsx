@@ -6,36 +6,27 @@ import { Heart } from "lucide-react";
 import { useFavorites } from "@/services/favoritesService";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
+import { ArchiveItem } from "@/services/archiveApi";
 
 interface ContentCardProps {
-  id: string;
-  title: string;
-  creator?: string;
-  description?: string;
-  mediaType: string;
-  thumbnailUrl: string;
+  item: ArchiveItem;
+  index: number;
   showFavoriteButton?: boolean;
-  isFavorite?: boolean;
 }
 
 const ContentCard = ({
-  id,
-  title,
-  creator,
-  description,
-  mediaType,
-  thumbnailUrl,
+  item,
+  index,
   showFavoriteButton = true,
-  isFavorite: initialIsFavorite = false,
 }: ContentCardProps) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { add, remove, check } = useFavorites();
-  const [isFavorite, setIsFavorite] = useState(initialIsFavorite || check(id));
+  const [isFavorite, setIsFavorite] = useState(check(item.identifier));
   const { toast } = useToast();
   
   const handleCardClick = () => {
-    navigate(`/play/${mediaType}/${id}`);
+    navigate(`/play/${item.mediatype}/${item.identifier}`);
   };
   
   const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -51,7 +42,7 @@ const ContentCard = ({
     }
     
     if (isFavorite) {
-      remove(id);
+      remove(item.identifier);
       setIsFavorite(false);
       toast({
         title: "Removed from favorites",
@@ -59,13 +50,13 @@ const ContentCard = ({
       });
     } else {
       add({
-        id,
-        title,
-        creator: creator || "Unknown",
-        description: description || "",
-        mediaType,
-        thumbnail: thumbnailUrl,
-        url: `/play/${mediaType}/${id}`,
+        id: item.identifier,
+        title: item.title,
+        creator: item.creator || "Unknown",
+        description: item.description || "",
+        mediaType: item.mediatype,
+        thumbnail: item.thumb || `https://archive.org/services/img/${item.identifier}`,
+        url: `/play/${item.mediatype}/${item.identifier}`,
       });
       setIsFavorite(true);
       toast({
@@ -79,12 +70,15 @@ const ContentCard = ({
     <motion.div
       className="bg-white/5 dark:bg-black/20 backdrop-blur-sm hover:bg-white/10 dark:hover:bg-black/30 border border-white/10 dark:border-white/5 rounded-xl overflow-hidden cursor-pointer group transition-all duration-300"
       whileHover={{ y: -5 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
       onClick={handleCardClick}
     >
       <div className="relative aspect-video">
         <img
-          src={thumbnailUrl || "/placeholder.svg"}
-          alt={title}
+          src={item.thumb || `https://archive.org/services/img/${item.identifier}`}
+          alt={item.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
           onError={(e) => {
@@ -108,16 +102,16 @@ const ContentCard = ({
       </div>
       
       <div className="p-4">
-        <h3 className="text-base font-medium line-clamp-1 mb-1">{title}</h3>
-        {creator && (
+        <h3 className="text-base font-medium line-clamp-1 mb-1">{item.title}</h3>
+        {item.creator && (
           <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mb-2">
-            {creator}
+            {item.creator}
           </p>
         )}
         
         <div className="flex items-center justify-between">
           <span className="text-xs px-2 py-1 rounded-full bg-white/10 dark:bg-white/5 backdrop-blur-sm">
-            {mediaType === "movies" ? "Movie" : mediaType === "audio" ? "Music" : mediaType}
+            {item.mediatype === "movies" ? "Movie" : item.mediatype === "audio" ? "Music" : item.mediatype}
           </span>
         </div>
       </div>

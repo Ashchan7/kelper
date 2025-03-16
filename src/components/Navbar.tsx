@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "./theme-provider";
-import { Search, Sun, Moon, Menu, X, ChevronRight, LogOut } from "lucide-react";
+import { Search, Sun, Moon, Menu, X, ChevronRight, LogOut, Home, Film, Music, Heart, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "@/providers/AuthProvider";

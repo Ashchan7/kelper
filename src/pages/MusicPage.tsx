@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import SearchBar from "@/components/SearchBar";
@@ -15,8 +16,9 @@ const MusicPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-6 pt-28 pb-24 md:pb-20">
-      <motion.div
+    <div className="container mx-auto px-6 pt-28 pb-20">
+      <div className="max-w-4xl mx-auto mb-12">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -30,6 +32,7 @@ const MusicPage = () => {
         </motion.div>
         
         <SearchBar onSearch={handleSearch} placeholder="Search for music..." />
+      </div>
       
       {searchQuery ? (
         <ContentGrid 

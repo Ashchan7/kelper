@@ -2,11 +2,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, Play } from "lucide-react";
 import { useFavorites } from "@/services/favoritesService";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { ArchiveItem } from "@/services/archiveApi";
+import { Button } from "@/components/ui/button";
 
 interface ContentCardProps {
   item: ArchiveItem;
@@ -99,7 +100,6 @@ const ContentCard = ({
       initial="initial"
       animate="animate"
       whileHover="hover"
-      onClick={handleCardClick}
     >
       <div className="relative aspect-video overflow-hidden">
         <motion.img
@@ -113,6 +113,18 @@ const ContentCard = ({
             target.src = "/placeholder.svg";
           }}
         />
+        
+        {/* Play button overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+          <Button 
+            onClick={handleCardClick}
+            variant="outline"
+            size="icon"
+            className="rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 w-12 h-12"
+          >
+            <Play className="w-6 h-6 text-white" fill="white" />
+          </Button>
+        </div>
         
         {showFavoriteButton && (
           <motion.button

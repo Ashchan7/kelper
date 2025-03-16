@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 
 export interface ArchiveItem {
@@ -95,20 +94,17 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
       setError(null);
 
       try {
-        // Generate a completely new random seed on each render
-        const randomSeed = Date.now();
+        let url;
         
-        // For featured content, we'll use a specific search that sorts by downloads
-        let searchQuery = "downloads:[10000 TO 100000000]";
-        
-        // Add media type filter if specified
-        if (mediaType !== "all") {
-          searchQuery += ` AND mediatype:${mediaType}`;
+        // Use the collection-based URL for movies
+        if (mediaType === "movies") {
+          url = `https://archive.org/advancedsearch.php?q=collection%3Amovies&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate`;
+        } else if (mediaType === "audio") {
+          url = `https://archive.org/advancedsearch.php?q=collection%3Aaudio&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate`;
+        } else {
+          // For "all" mediaType
+          url = `https://archive.org/advancedsearch.php?q=mediatype:(audio OR movies)&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate`;
         }
-        
-        const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(
-          searchQuery
-        )}&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=random&seed=${randomSeed}`;
 
         const response = await fetch(url);
         

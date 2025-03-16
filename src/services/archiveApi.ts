@@ -95,8 +95,8 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
       setError(null);
 
       try {
-        // Generate a random seed for each request to ensure we get different results each time
-        const randomSeed = Math.floor(Math.random() * 1000000);
+        // Generate a completely new random seed on each render
+        const randomSeed = Date.now();
         
         // For featured content, we'll use a specific search that sorts by downloads
         let searchQuery = "downloads:[10000 TO 100000000]";

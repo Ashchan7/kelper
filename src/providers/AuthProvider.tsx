@@ -1,19 +1,36 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getAuth } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAB_fake_key_replace_with_real_one",
+  authDomain: "kelper-app.firebaseapp.com",
+  projectId: "kelper-app",
+  storageBucket: "kelper-app.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
 interface User {
   id: string;
   name: string;
   email: string;
+  photoURL?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  loginWithGoogle: () => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -35,72 +52,49 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is stored in localStorage
-    const storedUser = localStorage.getItem("kelper_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const userData: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || "User",
+          email: firebaseUser.email || "",
+          photoURL: firebaseUser.photoURL || undefined
+        };
+        setUser(userData);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const loginWithGoogle = async (): Promise<boolean> => {
     try {
-      // Mock login process
-      // In a real app, you would make an API call to your backend
       setIsLoading(true);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
       
-      // For demo purposes, we'll just accept any credentials
-      const mockUser = {
-        id: crypto.randomUUID(),
-        name: email.split('@')[0],
-        email
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem("kelper_user", JSON.stringify(mockUser));
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setIsLoading(false);
-      return true;
-    } catch (error) {
-      setIsLoading(false);
-      console.error("Login failed:", error);
+      if (user) {
+        return true;
+      }
       return false;
+    } catch (error) {
+      console.error("Google login failed:", error);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
+  const logout = async (): Promise<void> => {
     try {
-      // Mock signup process
-      setIsLoading(true);
-      
-      // For demo purposes, we'll just create a user
-      const mockUser = {
-        id: crypto.randomUUID(),
-        name,
-        email
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem("kelper_user", JSON.stringify(mockUser));
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setIsLoading(false);
-      return true;
+      await signOut(auth);
     } catch (error) {
-      setIsLoading(false);
-      console.error("Signup failed:", error);
-      return false;
+      console.error("Logout failed:", error);
     }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("kelper_user");
   };
 
   return (
@@ -109,8 +103,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         user,
         isAuthenticated: !!user,
         isLoading,
-        login,
-        signup,
+        loginWithGoogle,
         logout
       }}
     >

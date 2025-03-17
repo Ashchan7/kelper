@@ -4,34 +4,20 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { FaGoogle } from 'react-icons/fa';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const handleGoogleLogin = async () => {
     setIsSubmitting(true);
     
     try {
-      const success = await login(email, password);
+      const success = await loginWithGoogle();
       
       if (success) {
         toast({
@@ -42,7 +28,7 @@ const LoginPage = () => {
       } else {
         toast({
           title: "Error",
-          description: "Invalid credentials",
+          description: "Login failed. Please try again.",
           variant: "destructive"
         });
       }
@@ -72,60 +58,32 @@ const LoginPage = () => {
               <span className="absolute -top-1 -right-2 w-1.5 h-1.5 bg-black dark:bg-white rounded-full"></span>
             </h2>
           </Link>
-          <h1 className="text-3xl font-medium mt-6 mb-2">Welcome back</h1>
-          <p className="text-gray-600 dark:text-gray-400">Sign in to your account</p>
+          <h1 className="text-3xl font-medium mt-6 mb-2">Welcome to Kelper</h1>
+          <p className="text-gray-600 dark:text-gray-400">Sign in with your Google account</p>
         </div>
         
         <div className="bg-white/5 dark:bg-black/20 backdrop-blur-sm border border-white/10 dark:border-white/5 rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="bg-white/10 dark:bg-black/20 border-white/10 dark:border-white/5"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="bg-white/10 dark:bg-black/20 border-white/10 dark:border-white/5"
-                required
-              />
-            </div>
-            
+          <div className="flex flex-col gap-4">
             <Button 
-              type="submit" 
-              className="w-full rounded-full" 
+              onClick={handleGoogleLogin}
               disabled={isSubmitting}
+              className="w-full py-6 rounded-xl flex items-center justify-center gap-2"
             >
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              <FaGoogle className="h-5 w-5" />
+              {isSubmitting ? "Signing in..." : "Sign in with Google"}
             </Button>
-          </form>
-        </div>
-        
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-medium text-black dark:text-white hover:opacity-80 transition-opacity">
-              Sign up
-            </Link>
-          </p>
+            
+            <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-4">
+              By signing in, you agree to our{" "}
+              <Link to="/terms" className="underline hover:text-black dark:hover:text-white">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="underline hover:text-black dark:hover:text-white">
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -2,20 +2,22 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, getAuth } from "firebase/auth";
 import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDjqcYGgQvBusWXQSafEqYLreZveXQkgGU",
+  apiKey: "AIzaSyDjqcYGgQvBusWXQSafEYqLreZveXQkgGU",
   authDomain: "kelperkelper.firebaseapp.com",
   projectId: "kelperkelper",
-  storageBucket: "kelperkelper.appspot.com",
+  storageBucket: "kelperkelper.firebasestorage.app",
   messagingSenderId: "640089849016",
-  appId: "1:640089849016:web:06072625ee7928487b08d4",
-  measurementId: "G-4VH9QLBEZH"
+  appId: "1:640089849016:web:b3043d165200d73d7b084d",
+  measurementId: "G-NZEHBXDSR2"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 

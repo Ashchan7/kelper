@@ -4,6 +4,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import QuickLinks from "./QuickLinks";
 import { motion } from "framer-motion";
+import { Toaster } from "./ui/toaster";
 
 const Layout = () => {
   const location = useLocation();
@@ -28,6 +29,9 @@ const Layout = () => {
       
       {/* Footer should always be visible */}
       <Footer />
+      
+      {/* Add Toaster for notifications */}
+      <Toaster />
     </div>
   );
 };

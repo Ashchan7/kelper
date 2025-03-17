@@ -162,6 +162,51 @@ const PlayerPage = () => {
     setIsFavorite(!isFavorite);
     // In a real app, we would also update this in a database or local storage
   };
+
+  // Handle sharing functionality
+  const handleShare = async () => {
+    const shareUrl = `https://archive.org/details/${id}`;
+    
+    // Try to use the Web Share API if available
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: activeMediaTitle || itemDetails?.title || "Check out this media from Internet Archive",
+          text: "I found this interesting item on Internet Archive",
+          url: shareUrl,
+        });
+        toast({
+          title: "Shared successfully!",
+          description: "Content has been shared",
+        });
+      } catch (error) {
+        // Fallback to clipboard if sharing was cancelled or failed
+        copyToClipboard(shareUrl);
+      }
+    } else {
+      // Fallback for browsers that don't support the Web Share API
+      copyToClipboard(shareUrl);
+    }
+  };
+  
+  // Helper function to copy to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        toast({
+          title: "Link copied!",
+          description: "Link has been copied to clipboard",
+        });
+      })
+      .catch(err => {
+        console.error('Failed to copy: ', err);
+        toast({
+          title: "Copy failed",
+          description: "Could not copy link to clipboard",
+          variant: "destructive"
+        });
+      });
+  };
   
   // Check if files appear to be episodes based on filenames
   const hasEpisodePattern = (files: any[]) => {
@@ -481,7 +526,12 @@ const PlayerPage = () => {
                       </a>
                     </Button>
                     
-                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center gap-2"
+                      onClick={handleShare}
+                    >
                       <Share2 className="w-4 h-4" />
                       Share
                     </Button>

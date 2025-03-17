@@ -132,17 +132,17 @@ const Navbar = ({ className = "" }: NavbarProps) => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Improved with better blur effect */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            className="md:hidden fixed inset-0 top-[73px] bg-white/80 dark:bg-black/80 backdrop-blur-xl z-40 p-6"
+            className="md:hidden fixed inset-0 top-[73px] bg-white/70 dark:bg-black/70 backdrop-blur-xl z-40"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 p-6">
               {isAuthenticated && (
                 <motion.div 
                   className="glass p-4 rounded-xl mb-4"
@@ -253,10 +253,10 @@ const MobileNavLink = ({
     <Link
       to={to}
       onClick={onClick}
-      className={`flex items-center justify-between p-3 rounded-xl transition-colors ${
+      className={`flex items-center justify-between p-3 rounded-xl backdrop-blur-sm transition-colors ${
         isActive 
-          ? "bg-black text-white dark:bg-white dark:text-black" 
-          : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50"
+          ? "bg-black/80 text-white dark:bg-white/80 dark:text-black" 
+          : "text-gray-800 dark:text-gray-200 bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-black/20"
       }`}
     >
       <div className="flex items-center gap-3">

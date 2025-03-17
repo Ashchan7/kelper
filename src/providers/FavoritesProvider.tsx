@@ -49,4 +49,3 @@ export const FavoritesProvider = ({ children }: FavoritesProviderProps) => {
 };
 
 export default FavoritesProvider;
-// Remove duplicate export of useFavoritesContext and useFavorites

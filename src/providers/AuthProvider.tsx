@@ -5,12 +5,13 @@ import { initializeApp } from "firebase/app";
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAB_fake_key_replace_with_real_one",
-  authDomain: "kelper-app.firebaseapp.com",
-  projectId: "kelper-app",
-  storageBucket: "kelper-app.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: "AIzaSyDjqcYGgQvBusWXQSafEqYLreZveXQkgGU",
+  authDomain: "kelperkelper.firebaseapp.com",
+  projectId: "kelperkelper",
+  storageBucket: "kelperkelper.appspot.com",
+  messagingSenderId: "640089849016",
+  appId: "1:640089849016:web:06072625ee7928487b08d4",
+  measurementId: "G-4VH9QLBEZH"
 };
 
 // Initialize Firebase

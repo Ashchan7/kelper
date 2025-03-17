@@ -29,10 +29,10 @@ const SearchPage = () => {
   // Determine the media type based on the active tab
   const mediaType = activeTab === "all" ? undefined : activeTab === "movies" ? "movies" : "audio";
 
-  // Use the hook for search
+  // Use the hook for search with proper type handling
   const { data: searchResults, isLoading, error } = useArchiveSearch(
     searchQuery,
-    mediaType === "movies" ? "movies" : mediaType === "music" ? "audio" : "all"
+    activeTab === "movies" ? "movies" : activeTab === "music" ? "audio" : "all"
   );
 
   return (

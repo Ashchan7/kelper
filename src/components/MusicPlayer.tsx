@@ -458,7 +458,4 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
   );
 };
 
-// Adding missing imports
-import { Music } from "lucide-react";
-
 export default MusicPlayer;

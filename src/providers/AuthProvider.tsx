@@ -55,6 +55,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // Add console logging for user login
+        console.log("User logged in:", firebaseUser.email);
+        console.log("User ID:", firebaseUser.uid);
+        
         const userData: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || "User",
@@ -63,6 +67,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         };
         setUser(userData);
       } else {
+        // Add console logging for user logout
+        console.log("No user is logged in.");
         setUser(null);
       }
       setIsLoading(false);

@@ -3,26 +3,34 @@ import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import QuickLinks from "./QuickLinks";
+import SidebarNavigation from "./SidebarNavigation";
 import { motion } from "framer-motion";
 import { Toaster } from "./ui/toaster";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Layout = () => {
   const location = useLocation();
+  const isMobile = useIsMobile();
   
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
       {/* Show Navbar on all pages */}
       <Navbar />
       
-      <motion.main
-        className="flex-grow"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Outlet />
-      </motion.main>
+      <div className="flex flex-1">
+        {/* Sidebar for desktop only - mobile uses QuickLinks */}
+        <SidebarNavigation />
+        
+        <motion.main
+          className="flex-grow"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Outlet />
+        </motion.main>
+      </div>
       
       {/* Add the QuickLinks component for mobile devices */}
       <QuickLinks />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,18 +68,9 @@ const Navbar = ({ className = "" }: NavbarProps) => {
           </motion.div>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
-          <div className="flex items-center gap-6">
-            <NavLink to="/" label="Home" />
-            <NavLink to="/movies" label="Movies" />
-            <NavLink to="/music" label="Music" />
-            <NavLink to="/favorites" label="Favorites" />
-            <NavLink to="/about" label="About" />
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
+        {/* Desktop Navigation - Only show on desktop if using sidebar */}
+        {!isMobile && (
+          <nav className="hidden md:flex items-center gap-4">
             <Link 
               to="/search" 
               className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -88,48 +78,26 @@ const Navbar = ({ className = "" }: NavbarProps) => {
               <Search className="w-5 h-5" />
             </Link>
             
-            {isAuthenticated ? (
-              <Button 
-                variant="ghost" 
-                onClick={logout}
-                className="font-medium text-sm hover:bg-black/5 dark:hover:bg-white/5"
-              >
-                Logout
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link to="/login">
-                  <Button 
-                    variant="ghost" 
-                    className="font-medium text-sm hover:bg-black/5 dark:hover:bg-white/5"
-                  >
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/signup">
-                  <Button className="rounded-full font-medium text-sm">
-                    Sign up
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
-        </nav>
+            <ThemeToggle />
+          </nav>
+        )}
 
-        {/* Mobile Menu Button */}
-        <div className="flex md:hidden items-center gap-4">
-          <ThemeToggle />
-          <button 
-            onClick={toggleMenu}
-            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-          >
-            {isMenuOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </button>
-        </div>
+        {/* Mobile Navigation */}
+        {isMobile && (
+          <div className="flex md:hidden items-center gap-4">
+            <ThemeToggle />
+            <button 
+              onClick={toggleMenu}
+              className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            >
+              {isMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Mobile Menu - Improved with better blur effect */}

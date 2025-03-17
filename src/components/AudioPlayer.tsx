@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, RepeatIcon, Shuffle, Music, FileMusic, List } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -573,7 +572,7 @@ const AudioPlayer = ({ tracks, initialTrackIndex = 0, onTrackChange }: AudioPlay
         </Tabs>
       </motion.div>
       
-      <style jsx global>{`
+      <style jsx="true">{`
         @keyframes soundwave {
           0% {
             height: 0.5rem;

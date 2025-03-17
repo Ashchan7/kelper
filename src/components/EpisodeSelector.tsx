@@ -23,6 +23,44 @@ interface EpisodeSelectorProps {
   onEpisodeSelect: (episodeUrl: string, episodeName: string, file?: MediaFile) => void;
 }
 
+// Check if file is a video file
+const isVideoFile = (file: MediaFile) => {
+  const name = file.name.toLowerCase();
+  const format = (file.format || '').toLowerCase();
+  
+  return (
+    name.endsWith('.mp4') || 
+    name.endsWith('.webm') || 
+    name.endsWith('.mov') ||
+    name.endsWith('.avi') ||
+    name.endsWith('.mkv') ||
+    name.endsWith('.ogv') ||
+    name.endsWith('.m4v') ||
+    format.includes('video')
+  );
+};
+
+// Check if file is an audio file
+const isAudioFile = (file: MediaFile) => {
+  const name = file.name.toLowerCase();
+  const format = (file.format || '').toLowerCase();
+  
+  return (
+    name.endsWith('.mp3') || 
+    name.endsWith('.ogg') || 
+    name.endsWith('.wav') || 
+    name.endsWith('.flac') ||
+    name.endsWith('.m4a') ||
+    name.endsWith('.aac') ||
+    format.includes('audio')
+  );
+};
+
+// Check if file is a valid media file for playback
+const isPlayableMedia = (file: MediaFile) => {
+  return isVideoFile(file) || isAudioFile(file);
+};
+
 const EpisodeSelector = ({ 
   episodeFiles, 
   itemId, 

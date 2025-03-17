@@ -8,10 +8,8 @@ import { motion } from "framer-motion";
 const Layout = () => {
   const location = useLocation();
   
-  // Remove the isPlayerPage logic for Navbar, so it always shows
-  
   return (
-    <div className="flex flex-col min-h-screen overflow-hidden">
+    <div className="flex flex-col min-h-screen overflow-x-hidden">
       {/* Show Navbar on all pages */}
       <Navbar />
       

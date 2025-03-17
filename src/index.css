@@ -258,3 +258,39 @@
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+/* Safe area padding for mobile devices */
+@supports (padding: max(0px)) {
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 1.5rem);
+  }
+  
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 1.5rem);
+  }
+}
+
+/* Media player controls - ensure consistent styling */
+.media-controls {
+  @apply transition-opacity duration-300 backdrop-blur-md bg-black/30 rounded-lg;
+}
+
+.media-control-button {
+  @apply p-2 rounded-full transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80;
+}
+
+/* Improve mobile experience on smaller screens */
+@media (max-width: 374px) {
+  .xs-hidden {
+    display: none;
+  }
+  
+  .xs-compact {
+    padding: 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+  
+  .xs-text-sm {
+    font-size: 0.875rem !important;
+  }
+}

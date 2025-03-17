@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Heart, Play } from "lucide-react";
@@ -23,14 +23,24 @@ const ContentCard = ({
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { add, remove, check } = useFavorites();
-  const [isFavorite, setIsFavorite] = useState(check(item.identifier));
+  const [isFavorite, setIsFavorite] = useState(false);
   const { toast } = useToast();
+  
+  // Use effect to initialize the favorite status
+  useEffect(() => {
+    const checkFavorite = async () => {
+      const result = await check(item.identifier);
+      setIsFavorite(result);
+    };
+    
+    checkFavorite();
+  }, [item.identifier, check]);
   
   const handleCardClick = () => {
     navigate(`/play/${item.mediatype}/${item.identifier}`);
   };
   
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
     if (!isAuthenticated) {
@@ -43,14 +53,14 @@ const ContentCard = ({
     }
     
     if (isFavorite) {
-      remove(item.identifier);
+      await remove(item.identifier);
       setIsFavorite(false);
       toast({
         title: "Removed from favorites",
         description: "Item removed from your favorites",
       });
     } else {
-      add({
+      await add({
         id: item.identifier,
         title: item.title,
         creator: item.creator || "Unknown",

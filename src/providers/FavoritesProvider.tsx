@@ -49,4 +49,4 @@ export const FavoritesProvider = ({ children }: FavoritesProviderProps) => {
 };
 
 export default FavoritesProvider;
-export { useFavorites };
+export { useFavoritesContext, useFavorites };

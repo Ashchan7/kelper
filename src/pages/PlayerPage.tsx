@@ -11,7 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 
 import { getItemDetails, isPlayableMediaFile } from "@/services/archiveApi";
-import { useFavorites } from "@/providers/FavoritesProvider";
+import { useFavoritesContext } from "@/providers/FavoritesProvider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,8 +28,8 @@ const PlayerPage = () => {
   const { toast } = useToast();
   const [activeMedia, setActiveMedia] = useState<string>("");
   const [activeMediaTitle, setActiveMediaTitle] = useState<string>("");
-  const { favorites, addFavorite, removeFavorite } = useFavorites();
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoritesContext();
+  const [isFavoriteState, setIsFavoriteState] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   
   // Fetch item details with proper error handling for current React Query version
@@ -129,34 +129,36 @@ const PlayerPage = () => {
   
   // Check if item is in favorites
   useEffect(() => {
-    if (itemDetails) {
-      setIsFavorite(favorites.some((fav) => fav.id === itemDetails.identifier));
+    if (itemDetails && id) {
+      setIsFavoriteState(isFavorite(itemDetails.identifier));
     }
-  }, [favorites, itemDetails]);
+  }, [favorites, itemDetails, id, isFavorite]);
   
   // Toggle favorite status
-  const toggleFavorite = () => {
+  const toggleFavorite = async () => {
     if (itemDetails) {
-      if (isFavorite) {
-        removeFavorite(itemDetails.identifier);
+      if (isFavoriteState) {
+        await removeFavorite(itemDetails.identifier);
         toast({
           title: "Removed from favorites",
           description: `"${itemDetails.title}" has been removed from your favorites.`
         });
       } else {
-        addFavorite({
+        await addFavorite({
           id: itemDetails.identifier,
           title: itemDetails.title,
           creator: itemDetails.creator,
-          thumbnailUrl: itemDetails.thumbnailUrl,
+          description: itemDetails.description || "",
           mediaType: mediaType!,
+          thumbnail: itemDetails.thumbnailUrl || "",
+          url: `/play/${mediaType}/${itemDetails.identifier}`,
         });
         toast({
           title: "Added to favorites",
           description: `"${itemDetails.title}" has been added to your favorites.`
         });
       }
-      setIsFavorite(!isFavorite);
+      setIsFavoriteState(!isFavoriteState);
     }
   };
   
@@ -239,6 +241,7 @@ const PlayerPage = () => {
   const hasEpisodes = episodeFiles.length > 0;
   
   return (
+    
     <div className="pt-20 pb-28 md:pb-20 px-4 md:px-8 max-w-7xl mx-auto">
       {isLoading ? (
         <div className="space-y-4">
@@ -340,12 +343,12 @@ const PlayerPage = () => {
                       )}
                     </div>
                     <Button
-                      variant={isFavorite ? "default" : "outline"}
+                      variant={isFavoriteState ? "default" : "outline"}
                       size="icon"
                       onClick={toggleFavorite}
-                      className={isFavorite ? "text-white" : ""}
+                      className={isFavoriteState ? "text-white" : ""}
                     >
-                      <Heart className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`} />
+                      <Heart className={`w-5 h-5 ${isFavoriteState ? "fill-current" : ""}`} />
                     </Button>
                   </div>
                   

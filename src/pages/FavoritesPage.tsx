@@ -1,16 +1,15 @@
-
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import ContentGrid from "@/components/ContentGrid";
-import { useFavorites } from "@/services/favoritesService";
+import { useFavoritesContext } from "@/providers/FavoritesProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { ArchiveItem } from "@/services/archiveApi";
 
 const FavoritesPage = () => {
-  const { favorites, isLoading } = useFavorites();
+  const { favorites, isLoading } = useFavoritesContext();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();

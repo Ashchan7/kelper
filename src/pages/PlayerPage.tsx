@@ -85,7 +85,7 @@ const PlayerPage = () => {
   
   // Improved handling of setting the initial media file
   useEffect(() => {
-    if (itemDetails && episodeFiles.length > 0) {
+    if (itemDetails && episodeFiles.length > 0 && !activeMedia) {
       setMediaError(null);
       console.log("Total files available:", episodeFiles.length);
       
@@ -125,7 +125,7 @@ const PlayerPage = () => {
         setMediaError("Error preparing media files for playback.");
       }
     }
-  }, [itemDetails, id, episodeFiles]);
+  }, [itemDetails, id, episodeFiles, activeMedia]);
   
   // Check if item is in favorites
   useEffect(() => {
@@ -195,20 +195,34 @@ const PlayerPage = () => {
     });
   };
   
-  // Improved episode selection with better error handling
+  // Improved episode selection with better error handling - THIS IS THE CRITICAL FIX
   const handleEpisodeSelect = (episodeUrl: string, episodeName: string, file?: any) => {
     try {
       console.log("Selected episode:", episodeName);
       console.log("Episode URL:", episodeUrl);
       
-      setActiveMedia(episodeUrl);
-      setActiveMediaTitle(episodeName.split('/').pop() || episodeName);
-      setMediaError(null);
+      // Important: Reset media player before changing source
+      if (mediaType === "video" || mediaType === "movies") {
+        const videoElement = document.querySelector('video');
+        if (videoElement) {
+          videoElement.pause();
+          videoElement.currentTime = 0;
+          videoElement.load();
+        }
+      }
       
-      toast({
-        title: "Loading media",
-        description: `Playing: ${episodeName.split('/').pop() || episodeName}`,
-      });
+      // Clear and set new media URL
+      setActiveMedia("");
+      setTimeout(() => {
+        setActiveMedia(episodeUrl);
+        setActiveMediaTitle(episodeName.split('/').pop() || episodeName);
+        setMediaError(null);
+        
+        toast({
+          title: "Loading media",
+          description: `Playing: ${episodeName.split('/').pop() || episodeName}`,
+        });
+      }, 50);
       
     } catch (error) {
       console.error("Error selecting episode:", error);
@@ -288,6 +302,7 @@ const PlayerPage = () => {
                     src={activeMedia}
                     title={activeMediaTitle}
                     poster={itemDetails?.thumbnailUrl || ""}
+                    key={activeMedia} // Add key to force re-render on source change
                   />
                 ) : (
                   <MusicPlayer
@@ -299,6 +314,7 @@ const PlayerPage = () => {
                       coverArt: itemDetails?.thumbnailUrl || ""
                     }]}
                     initialTrackIndex={0}
+                    key={activeMedia} // Add key to force re-render on source change
                   />
                 )}
               </div>

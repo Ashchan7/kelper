@@ -35,6 +35,19 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sourceType, setSourceType] = useState<string | null>(null);
   
+  // Reset state when source changes
+  useEffect(() => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setLoadError(null);
+    
+    // This helps ensure the video element reloads properly
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
+  }, [src]);
+  
   // Detect source type on src change
   useEffect(() => {
     if (!src) return;
@@ -181,6 +194,7 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
     console.error("Video loading error:", video.error?.code, video.error?.message);
+    console.error("Video source that failed:", src);
     
     // More specific error messages based on error code
     let errorMessage = "Failed to load video.";
@@ -218,6 +232,8 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     
     setDuration(video.duration);
     setLoadError(null);
+    console.log("Video metadata loaded for source:", src);
+    console.log("Video duration:", video.duration);
   };
   
   // Add a function to retry loading the video
@@ -349,6 +365,7 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
           onEnded={() => setIsPlaying(false)}
           poster={poster}
           preload="metadata"
+          key={src} // Important: Add key to force video element to re-render when src changes
         >
           <source src={src} type={sourceType || undefined} />
           Your browser does not support the video tag.

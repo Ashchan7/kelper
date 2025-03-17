@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import MoviePlayer from "@/components/MoviePlayer";
-import MusicPlayer from "@/components/MusicPlayer";
+import AudioPlayer from "@/components/AudioPlayer";
 import EpisodeSelector from "@/components/EpisodeSelector";
 import { getItemDetails } from "@/services/archiveApi";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Info, Heart, ExternalLink, Share2, ListVideo } from "lucide-react";
+import { ArrowLeft, Info, Heart, ExternalLink, Share2, ListVideo, Music, FileAudio } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -21,12 +21,18 @@ const PlayerPage = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeMediaUrl, setActiveMediaUrl] = useState<string>("");
   const [activeMediaTitle, setActiveMediaTitle] = useState<string>("");
+  const [activeMediaFile, setActiveMediaFile] = useState<any>(null);
   const { toast } = useToast();
   
   // Check if we're dealing with a movie or audio
   const mediaType = location.state?.mediaType || 
                   (location.pathname.includes('/movies/') ? 'movies' : 
-                   location.pathname.includes('/music/') ? 'audio' : 'movies'); // Default to movies if none specified
+                   location.pathname.includes('/music/') ? 'audio' : 'movies');
+  
+  // State to track actual detected content type
+  const [detectedMediaType, setDetectedMediaType] = useState<'video' | 'audio' | 'unknown'>(
+    mediaType === 'movies' ? 'video' : mediaType === 'audio' ? 'audio' : 'unknown'
+  );
   
   useEffect(() => {
     if (!id) return;
@@ -44,84 +50,37 @@ const PlayerPage = () => {
         
         console.log("All files:", files);
         
-        // More inclusive file detection - accept more formats and be more permissive
-        const suitableFiles = files.filter((file: any) => {
-          if (!file || !file.name) return false;
-          
-          const name = file.name.toLowerCase();
-          const format = (file.format || '').toLowerCase();
-          
-          if (mediaType === 'movies') {
-            return (
-              name.endsWith('.mp4') || 
-              name.endsWith('.webm') || 
-              name.endsWith('.mov') ||
-              name.endsWith('.avi') ||
-              name.endsWith('.mkv') ||
-              name.endsWith('.ogv') ||
-              name.endsWith('.m4v') ||
-              format.includes('video') ||
-              name.includes('video') ||
-              // Accept more file types that might be video
-              name.includes('movie') ||
-              name.includes('film')
-            );
-          } else if (mediaType === 'audio') {
-            return (
-              name.endsWith('.mp3') || 
-              name.endsWith('.ogg') || 
-              name.endsWith('.wav') || 
-              name.endsWith('.flac') ||
-              name.endsWith('.m4a') ||
-              name.endsWith('.aac') ||
-              format.includes('audio') ||
-              name.includes('audio') ||
-              name.includes('sound') ||
-              name.includes('track')
-            );
-          }
-          
-          return false;
-        });
+        // Filter files by detecting file type
+        const videoFiles = filterMediaFiles(files, 'video');
+        const audioFiles = filterMediaFiles(files, 'audio');
         
-        console.log("Suitable files:", suitableFiles);
+        console.log("Video files:", videoFiles);
+        console.log("Audio files:", audioFiles);
         
-        if (suitableFiles.length === 0) {
-          // If no suitable files found, try to find ANY file that might be playable
-          // Be very permissive here to catch anything that could be media
-          const fallbackFiles = files.filter((file: any) => {
-            if (!file || !file.name) return false;
-            
-            const name = file.name.toLowerCase();
-            const format = (file.format || '').toLowerCase();
-            
-            // Accept any file that remotely looks like it could be media
-            return name.includes('video') || 
-                  name.includes('audio') || 
-                  name.includes('media') ||
-                  name.includes('mp') ||
-                  format.includes('video') || 
-                  format.includes('audio') ||
-                  // These are common extensions
-                  /\.(mp4|webm|mov|avi|mkv|ogv|mp3|ogg|wav|flac|m4a)$/i.test(name);
-          });
-          
-          console.log("Fallback files:", fallbackFiles);
-          
-          if (fallbackFiles.length > 0) {
-            setMediaFiles(fallbackFiles);
-          } else {
-            // Last resort: just take the first 5 files of any type
-            setMediaFiles(files.slice(0, 5));
-            
-            toast({
-              title: "Limited playback support",
-              description: "We couldn't find optimal media files. Try viewing the content on Archive.org directly.",
-              variant: "destructive"
-            });
-          }
+        // Determine what type of content we're dealing with
+        if (mediaType === 'movies' && videoFiles.length > 0) {
+          setMediaFiles(videoFiles);
+          setDetectedMediaType('video');
+        } else if (mediaType === 'audio' && audioFiles.length > 0) {
+          setMediaFiles(audioFiles);
+          setDetectedMediaType('audio');
+        } else if (videoFiles.length > 0) {
+          // Fallback to video if that's what we have
+          setMediaFiles(videoFiles);
+          setDetectedMediaType('video');
+        } else if (audioFiles.length > 0) {
+          // Fallback to audio if that's what we have
+          setMediaFiles(audioFiles);
+          setDetectedMediaType('audio');
         } else {
-          setMediaFiles(suitableFiles);
+          // No playable media found
+          setMediaFiles([]);
+          setDetectedMediaType('unknown');
+          toast({
+            title: "No playable media",
+            description: "We couldn't find playable media files. Try viewing on Archive.org directly.",
+            variant: "destructive"
+          });
         }
       } catch (err) {
         console.error("Error fetching item details:", err);
@@ -138,6 +97,44 @@ const PlayerPage = () => {
     
     fetchDetails();
   }, [id, mediaType, toast]);
+  
+  // Function to filter media files by type
+  const filterMediaFiles = (files: any[], type: 'video' | 'audio') => {
+    return files.filter(file => {
+      if (!file || !file.name) return false;
+      
+      const name = file.name.toLowerCase();
+      const format = (file.format || '').toLowerCase();
+      
+      if (type === 'video') {
+        return (
+          name.endsWith('.mp4') || 
+          name.endsWith('.webm') || 
+          name.endsWith('.mov') ||
+          name.endsWith('.avi') ||
+          name.endsWith('.mkv') ||
+          name.endsWith('.ogv') ||
+          name.endsWith('.m4v') ||
+          format.includes('video') ||
+          (format.includes('mpeg') && !format.includes('audio'))
+        );
+      } else if (type === 'audio') {
+        return (
+          name.endsWith('.mp3') || 
+          name.endsWith('.ogg') || 
+          name.endsWith('.wav') || 
+          name.endsWith('.flac') ||
+          name.endsWith('.m4a') ||
+          name.endsWith('.aac') ||
+          format.includes('audio') ||
+          format.includes('mp3') ||
+          format.includes('wav')
+        );
+      }
+      
+      return false;
+    });
+  };
   
   useEffect(() => {
     // Set the initial active media file
@@ -156,6 +153,7 @@ const PlayerPage = () => {
         
         setActiveMediaUrl(`https://archive.org/download/${id}/${encodeURIComponent(mainFile.name)}`);
         setActiveMediaTitle(title);
+        setActiveMediaFile(mainFile);
       }
     }
   }, [mediaFiles, id, itemDetails]);
@@ -210,95 +208,78 @@ const PlayerPage = () => {
     return null;
   };
   
-  // Check if file is a valid media file for playback
-  const isPlayableMedia = (file: any) => {
-    if (!file || !file.name) return false;
-    
-    const name = file.name.toLowerCase();
-    const format = (file.format || '').toLowerCase();
-    
-    if (mediaType === 'movies') {
-      return (
-        name.endsWith('.mp4') || 
-        name.endsWith('.webm') || 
-        name.endsWith('.mov') ||
-        name.endsWith('.avi') ||
-        name.endsWith('.mkv') ||
-        name.endsWith('.ogv') ||
-        name.endsWith('.m4v') ||
-        format.includes('video')
-      );
-    } else if (mediaType === 'audio') {
-      return (
-        name.endsWith('.mp3') || 
-        name.endsWith('.ogg') || 
-        name.endsWith('.wav') || 
-        name.endsWith('.flac') ||
-        name.endsWith('.m4a') ||
-        format.includes('audio')
-      );
-    }
-    
-    return false;
-  };
-  
   // Handle episode selection
-  const handleEpisodeSelect = (url: string, title: string) => {
+  const handleEpisodeSelect = (url: string, title: string, file: any = null) => {
     console.log("Episode selected:", url, title);
     setActiveMediaUrl(url);
     setActiveMediaTitle(title);
+    if (file) setActiveMediaFile(file);
   };
   
-  // Prepare data for music player if needed
+  // Prepare data for audio player
   const getAudioTracks = () => {
-    if (!mediaFiles.length || mediaType !== 'audio') return [];
+    if (!mediaFiles.length) return [];
     
-    return mediaFiles.map((file, index) => ({
-      id: `${id}-track-${index}`,
-      title: file.title || file.name.split('/').pop().split('.')[0] || `Track ${index + 1}`,
-      artist: itemDetails?.creator || itemDetails?.artist || "Unknown Artist",
-      src: `https://archive.org/download/${id}/${encodeURIComponent(file.name)}`,
-      coverArt: `https://archive.org/services/img/${id}`,
-    }));
+    return mediaFiles.map((file, index) => {
+      // Clean up the filename to use as a title if needed
+      const fileName = file.name.split('/').pop();
+      const fileNameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+      const displayName = formatDisplayName(fileNameWithoutExt);
+      
+      return {
+        id: `${id}-track-${index}`,
+        title: displayName || `Track ${index + 1}`,
+        artist: itemDetails?.creator || itemDetails?.artist || "Unknown Artist",
+        album: itemDetails?.title || "Unknown Album",
+        src: `https://archive.org/download/${id}/${encodeURIComponent(file.name)}`,
+        coverArt: `https://archive.org/services/img/${id}`,
+        fileInfo: file
+      };
+    });
+  };
+  
+  // Format display name from filename
+  const formatDisplayName = (name: string) => {
+    // Replace underscores and dots with spaces
+    let displayName = name.replace(/[_\.]/g, ' ');
+    
+    // Capitalize first letter of each word
+    displayName = displayName.replace(/\b\w/g, l => l.toUpperCase());
+    
+    return displayName;
   };
   
   // Get the main media file for the player with improved detection
   const getMainMediaFile = () => {
     if (!mediaFiles.length) return null;
     
-    // First filter to only get playable media files
-    const playableFiles = mediaFiles.filter(isPlayableMedia);
-    
-    if (playableFiles.length === 0) return null;
-    
-    if (mediaType === 'movies') {
+    if (detectedMediaType === 'video') {
       // First try to find a file with a standard video extension
-      const standardVideo = playableFiles.find(file => 
+      const standardVideo = mediaFiles.find(file => 
         file.name.toLowerCase().match(/\.(mp4|webm|mov)$/i)
       );
       
       if (standardVideo) return standardVideo;
       
       // If no standard video found, sort by size (typically the largest file is the main movie)
-      const sortedFiles = [...playableFiles].sort((a, b) => (b.size || 0) - (a.size || 0));
+      const sortedFiles = [...mediaFiles].sort((a, b) => (b.size || 0) - (a.size || 0));
       
       return sortedFiles[0];
-    } else if (mediaType === 'audio') {
+    } else if (detectedMediaType === 'audio') {
       // For audio, prefer MP3 format
-      const mp3File = playableFiles.find(file => 
+      const mp3File = mediaFiles.find(file => 
         file.name.toLowerCase().endsWith('.mp3')
       );
       
       if (mp3File) return mp3File;
       
       // Otherwise take the first audio file
-      return playableFiles[0];
+      return mediaFiles[0];
     }
     
-    return playableFiles[0];
+    return mediaFiles[0];
   };
   
-  const mainMediaFile = getMainMediaFile();
   const audioTracks = getAudioTracks();
   const hasMultipleEpisodes = mediaFiles.length > 1 && hasEpisodePattern(mediaFiles);
   
@@ -388,14 +369,24 @@ const PlayerPage = () => {
         >
           {isLoading ? (
             <Skeleton className="w-full aspect-video rounded-xl" />
-          ) : mediaType === 'movies' && activeMediaUrl ? (
+          ) : detectedMediaType === 'video' && activeMediaUrl ? (
             <MoviePlayer 
               src={activeMediaUrl}
               title={activeMediaTitle || itemDetails?.title || ""}
               poster={`https://archive.org/services/img/${id}`}
             />
-          ) : mediaType === 'audio' && audioTracks.length > 0 ? (
-            <MusicPlayer tracks={audioTracks} />
+          ) : detectedMediaType === 'audio' && audioTracks.length > 0 ? (
+            <AudioPlayer 
+              tracks={audioTracks} 
+              initialTrackIndex={audioTracks.findIndex(track => 
+                track.src === activeMediaUrl
+              ) || 0}
+              onTrackChange={(track) => {
+                setActiveMediaUrl(track.src);
+                setActiveMediaTitle(track.title);
+                setActiveMediaFile(track.fileInfo);
+              }}
+            />
           ) : (
             <div className="w-full aspect-video bg-black/10 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center p-6">
               <p className="text-gray-500 dark:text-gray-400 mb-4 text-center">
@@ -429,8 +420,12 @@ const PlayerPage = () => {
                 <TabsTrigger value="about">About</TabsTrigger>
                 {hasMultipleEpisodes && (
                   <TabsTrigger value="episodes" className="flex items-center gap-2">
-                    <ListVideo className="w-4 h-4" />
-                    Episodes
+                    {detectedMediaType === 'video' ? (
+                      <ListVideo className="w-4 h-4" />
+                    ) : (
+                      <FileAudio className="w-4 h-4" />
+                    )}
+                    {detectedMediaType === 'audio' ? 'Tracks' : 'Episodes'}
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -500,7 +495,7 @@ const PlayerPage = () => {
                     episodeFiles={mediaFiles}
                     itemId={id || ""}
                     activeEpisode={activeMediaUrl}
-                    onEpisodeSelect={handleEpisodeSelect}
+                    onEpisodeSelect={(url, name, file) => handleEpisodeSelect(url, name, file)}
                   />
                 </TabsContent>
               )}
@@ -513,13 +508,13 @@ const PlayerPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="hidden md:block h-[400px]"
+              className="hidden md:block md:h-[400px]"
             >
               <EpisodeSelector 
                 episodeFiles={mediaFiles}
                 itemId={id || ""}
                 activeEpisode={activeMediaUrl}
-                onEpisodeSelect={handleEpisodeSelect}
+                onEpisodeSelect={(url, name, file) => handleEpisodeSelect(url, name, file)}
               />
             </motion.div>
           )}
@@ -590,6 +585,94 @@ const formatBytes = (bytes: number, decimals = 2) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+// Check if files appear to be episodes based on filenames
+const hasEpisodePattern = (files: any[]) => {
+  // Check if multiple files with episode-like patterns in names
+  const episodePatterns = [
+    /EP\d+/i,                  // EP01, EP1
+    /E\d+/i,                   // E01, E1
+    /Episode[\s-_]?\d+/i,      // Episode 1, Episode-1
+    /Part[\s-_]?\d+/i,         // Part 1, Part-1
+    /\d+[\s-_]of[\s-_]\d+/i    // 1 of 5
+  ];
+  
+  let episodeCount = 0;
+  for (const file of files) {
+    for (const pattern of episodePatterns) {
+      if (pattern.test(file.name)) {
+        episodeCount++;
+        break;
+      }
+    }
+  }
+  
+  // If more than one file matches episode patterns, consider it an episode collection
+  return episodeCount > 1;
+};
+
+// Extract episode info from filename
+const extractEpisodeInfo = (filename: string) => {
+  const episodePatterns = [
+    { pattern: /EP(\d+)/i, prefix: "Episode" },                 // EP01, EP1
+    { pattern: /E(\d+)/i, prefix: "Episode" },                  // E01, E1
+    { pattern: /Episode[\s-_]?(\d+)/i, prefix: "Episode" },     // Episode 1, Episode-1
+    { pattern: /Part[\s-_]?(\d+)/i, prefix: "Part" },           // Part 1, Part-1
+    { pattern: /(\d+)[\s-_]of[\s-_]\d+/i, prefix: "Part" }      // 1 of 5
+  ];
+  
+  for (const { pattern, prefix } of episodePatterns) {
+    const match = filename.match(pattern);
+    if (match && match[1]) {
+      return `${prefix} ${match[1]}`;
+    }
+  }
+  
+  return null;
+};
+
+// Check if file is a valid media file for playback
+const isPlayableMedia = (file: any, type: 'video' | 'audio' | null = null) => {
+  if (!file || !file.name) return false;
+  
+  const name = file.name.toLowerCase();
+  const format = (file.format || '').toLowerCase();
+  
+  if (type === 'video' || type === null) {
+    const isVideo = 
+      name.endsWith('.mp4') || 
+      name.endsWith('.webm') || 
+      name.endsWith('.mov') ||
+      name.endsWith('.avi') ||
+      name.endsWith('.mkv') ||
+      name.endsWith('.ogv') ||
+      name.endsWith('.m4v') ||
+      format.includes('video');
+    
+    if (isVideo && type === 'video') return true;
+    if (isVideo && type === null) return true;
+  }
+  
+  if (type === 'audio' || type === null) {
+    const isAudio =
+      name.endsWith('.mp3') || 
+      name.endsWith('.ogg') || 
+      name.endsWith('.wav') || 
+      name.endsWith('.flac') ||
+      name.endsWith('.m4a') ||
+      name.endsWith('.aac') ||
+      format.includes('audio');
+    
+    if (isAudio && type === 'audio') return true;
+    if (isAudio && type === null) return true;
+  }
+  
+  return false;
+};
+
+const toggleFavorite = () => {
+  // This would be implemented with proper state management in a real app
 };
 
 export default PlayerPage;

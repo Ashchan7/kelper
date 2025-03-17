@@ -39,7 +39,7 @@ const PlayerPage = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
-  // Fetch related items - dummy data for now
+  // Fetch related items
   const { data: relatedItems, isLoading: isRelatedLoading } = useQuery({
     queryKey: ["relatedItems", id],
     queryFn: () => getRelatedItemsFromCollection(id!),
@@ -193,10 +193,14 @@ const PlayerPage = () => {
                   />
                 ) : (
                   <MusicPlayer
-                    audioSrc={activeMedia}
-                    title={activeMediaTitle}
-                    coverArt={itemDetails?.thumbnailUrl || ""}
-                    artist={itemDetails?.creator || "Unknown Artist"}
+                    tracks={[{
+                      id: itemDetails?.identifier || "track-1",
+                      title: activeMediaTitle || itemDetails?.title || "Unknown Track",
+                      artist: itemDetails?.creator || "Unknown Artist",
+                      src: activeMedia,
+                      coverArt: itemDetails?.thumbnailUrl || ""
+                    }]}
+                    initialTrackIndex={0}
                   />
                 )}
               </div>

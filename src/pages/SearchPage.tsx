@@ -10,7 +10,7 @@ import SearchBar from "@/components/SearchBar";
 import ContentGrid from "@/components/ContentGrid";
 import { useToast } from "@/hooks/use-toast";
 
-import { searchArchive } from "@/services/archiveApi";
+import { useArchiveSearch } from "@/services/archiveApi";
 import { useQuery } from "@tanstack/react-query";
 
 const SearchPage = () => {
@@ -29,13 +29,11 @@ const SearchPage = () => {
   // Determine the media type based on the active tab
   const mediaType = activeTab === "all" ? undefined : activeTab === "movies" ? "movies" : "audio";
 
-  // Search query
-  const { data: searchResults, isLoading, error } = useQuery({
-    queryKey: ["search", searchQuery, mediaType],
-    queryFn: () => searchArchive(searchQuery, mediaType),
-    enabled: !!searchQuery,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // Use the hook for search
+  const { data: searchResults, isLoading, error } = useArchiveSearch(
+    searchQuery,
+    mediaType === "movies" ? "movies" : mediaType === "music" ? "audio" : "all"
+  );
 
   return (
     <div className="pt-24 pb-20 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">
@@ -79,13 +77,13 @@ const SearchPage = () => {
             </div>
 
             <TabsContent value="all" className="mt-0">
-              {renderSearchResults(searchResults, isLoading, error, searchQuery)}
+              {renderSearchResults(searchResults?.items, isLoading, error, searchQuery)}
             </TabsContent>
             <TabsContent value="movies" className="mt-0">
-              {renderSearchResults(searchResults, isLoading, error, searchQuery)}
+              {renderSearchResults(searchResults?.items, isLoading, error, searchQuery)}
             </TabsContent>
             <TabsContent value="music" className="mt-0">
-              {renderSearchResults(searchResults, isLoading, error, searchQuery)}
+              {renderSearchResults(searchResults?.items, isLoading, error, searchQuery)}
             </TabsContent>
           </Tabs>
         )}

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { getItemDetails } from "@/services/archiveApi";
+import { getItemDetails, isPlayableMediaFile } from "@/services/archiveApi";
 import { useFavorites } from "@/providers/FavoritesProvider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -83,60 +83,38 @@ const PlayerPage = () => {
   // Extract media files from item details
   const episodeFiles = itemDetails?.files || [];
   
-  // Function to check if a file is a playable media file
-  const isPlayableMedia = (file: any) => {
-    if (!file || !file.name) return false;
-    
-    const name = file.name.toLowerCase();
-    const format = (file.format || '').toLowerCase();
-    
-    // Check if it has a length property (duration)
-    if (file.length) return true;
-    
-    // Check video formats
-    const isVideo = name.endsWith('.mp4') || 
-                    name.endsWith('.webm') || 
-                    name.endsWith('.mov') || 
-                    name.endsWith('.avi') || 
-                    name.endsWith('.mkv') || 
-                    name.endsWith('.ogv') ||
-                    name.endsWith('.mpg') ||
-                    name.endsWith('.mpeg') ||
-                    format.includes('video');
-    
-    // Check audio formats
-    const isAudio = name.endsWith('.mp3') || 
-                    name.endsWith('.ogg') || 
-                    name.endsWith('.wav') || 
-                    name.endsWith('.flac') || 
-                    name.endsWith('.m4a') || 
-                    name.endsWith('.aac') ||
-                    format.includes('audio');
-    
-    return isVideo || isAudio;
-  };
-  
-  // Improved handling of setting the initial media file with debugging
+  // Improved handling of setting the initial media file
   useEffect(() => {
     if (itemDetails && episodeFiles.length > 0) {
       setMediaError(null);
       console.log("Total files available:", episodeFiles.length);
       
       try {
-        // Find the first video or audio file and set it as the active media
-        const playableFiles = episodeFiles.filter(isPlayableMedia);
+        // Find playable files using our improved detection function
+        const playableFiles = episodeFiles.filter(isPlayableMediaFile);
         console.log("Playable files found:", playableFiles.length);
         
         if (playableFiles.length > 0) {
+          // Select the first playable file
           const firstPlayableFile = playableFiles[0];
-          const initialMediaUrl = `https://archive.org/download/${id}/${encodeURIComponent(firstPlayableFile.name)}`;
+          
+          // For videos, prefer the MP4 derivative if available for better browser compatibility
+          const mp4Version = playableFiles.find(file => 
+            file.name.toLowerCase().endsWith('.mp4') && 
+            file.source === 'derivative'
+          );
+          
+          const fileToUse = mp4Version || firstPlayableFile;
+          console.log("Selected file for playback:", fileToUse.name);
+          
+          const initialMediaUrl = `https://archive.org/download/${id}/${encodeURIComponent(fileToUse.name)}`;
           setActiveMedia(initialMediaUrl);
-          setActiveMediaTitle(firstPlayableFile.name);
+          setActiveMediaTitle(fileToUse.name.split('/').pop() || fileToUse.name);
           
           console.log("Setting initial media:", {
             url: initialMediaUrl,
-            title: firstPlayableFile.name,
-            format: firstPlayableFile.format
+            title: fileToUse.name,
+            format: fileToUse.format
           });
         } else {
           console.warn("No playable media files found");
@@ -217,26 +195,20 @@ const PlayerPage = () => {
     });
   };
   
-  // Handle episode selection with improved error handling
+  // Improved episode selection with better error handling
   const handleEpisodeSelect = (episodeUrl: string, episodeName: string, file?: any) => {
     try {
+      console.log("Selected episode:", episodeName);
+      console.log("Episode URL:", episodeUrl);
+      
       setActiveMedia(episodeUrl);
-      setActiveMediaTitle(episodeName);
+      setActiveMediaTitle(episodeName.split('/').pop() || episodeName);
       setMediaError(null);
       
-      console.log("Selected media:", {
-        url: episodeUrl,
-        name: episodeName,
-        file: file
+      toast({
+        title: "Loading media",
+        description: `Playing: ${episodeName.split('/').pop() || episodeName}`,
       });
-      
-      // Test if the URL is valid
-      const validationImage = new Image();
-      validationImage.onerror = () => {
-        console.warn("Media URL validation failed");
-        // Don't set error here, let the players handle it
-      };
-      validationImage.src = episodeUrl;
       
     } catch (error) {
       console.error("Error selecting episode:", error);

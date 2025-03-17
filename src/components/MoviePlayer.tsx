@@ -31,8 +31,39 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
   const playerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  // Add a state to track loading errors
+  // Add a state to track loading errors and source type
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [sourceType, setSourceType] = useState<string | null>(null);
+  
+  // Detect source type on src change
+  useEffect(() => {
+    if (!src) return;
+    
+    try {
+      // Extract file extension
+      const fileExtension = src.split('.').pop()?.toLowerCase();
+      console.log("Video source file extension:", fileExtension);
+      
+      // Set the appropriate source type based on file extension
+      if (fileExtension === 'mp4') {
+        setSourceType('video/mp4');
+      } else if (fileExtension === 'webm') {
+        setSourceType('video/webm');
+      } else if (fileExtension === 'mkv') {
+        setSourceType('video/x-matroska');
+      } else if (fileExtension === 'ogv') {
+        setSourceType('video/ogg');
+      } else {
+        // Default to mp4 for unknown extensions
+        setSourceType('video/mp4');
+      }
+      
+      // Reset error state when source changes
+      setLoadError(null);
+    } catch (error) {
+      console.error("Error processing video source:", error);
+    }
+  }, [src]);
   
   // Control visibility timer
   useEffect(() => {
@@ -146,14 +177,36 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     setCurrentTime(newTime);
   };
   
-  // Add error handling for video loading
+  // Enhanced error handling for video loading
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
-    console.error("Video loading error:", video.error);
-    setLoadError("Failed to load video. Please try again later.");
+    console.error("Video loading error:", video.error?.code, video.error?.message);
+    
+    // More specific error messages based on error code
+    let errorMessage = "Failed to load video.";
+    if (video.error) {
+      switch (video.error.code) {
+        case 1: // MEDIA_ERR_ABORTED
+          errorMessage = "Video playback was aborted.";
+          break;
+        case 2: // MEDIA_ERR_NETWORK
+          errorMessage = "Network error occurred while loading the video.";
+          break;
+        case 3: // MEDIA_ERR_DECODE
+          errorMessage = "Video format is not supported by your browser.";
+          break;
+        case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+          errorMessage = "This video format is not supported by your browser.";
+          break;
+        default:
+          errorMessage = `Video error: ${video.error.message}`;
+      }
+    }
+    
+    setLoadError(errorMessage);
     toast({
       title: "Video Error",
-      description: "Could not load the video file. Please try again or check another video.",
+      description: errorMessage,
       variant: "destructive",
     });
   };
@@ -267,26 +320,44 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
             <h3 className="text-xl font-medium mb-2">Video Playback Error</h3>
             <p className="mb-4 text-gray-400">{loadError}</p>
             <Button onClick={retryLoading}>Retry</Button>
+            {src && (
+              <Button variant="outline" className="ml-2" asChild>
+                <a 
+                  href={src} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  Open Video Directly
+                </a>
+              </Button>
+            )}
           </div>
         </div>
       ) : null}
       
-      <video
-        ref={videoRef}
-        src={src}
-        poster={poster}
-        className="w-full h-full object-contain"
-        onClick={(e) => {
-          e.stopPropagation();
-          togglePlay();
-        }}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleMetadataLoaded}
-        onError={handleVideoError}
-        onEnded={() => setIsPlaying(false)}
-        crossOrigin="anonymous"
-        preload="metadata"
-      />
+      {src ? (
+        <video
+          ref={videoRef}
+          className="w-full h-full object-contain"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleMetadataLoaded}
+          onError={handleVideoError}
+          onEnded={() => setIsPlaying(false)}
+          poster={poster}
+          preload="metadata"
+        >
+          <source src={src} type={sourceType || undefined} />
+          Your browser does not support the video tag.
+        </video>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-white">
+          <p>No video source provided</p>
+        </div>
+      )}
       
       {/* Overlay for title */}
       {showControls && (

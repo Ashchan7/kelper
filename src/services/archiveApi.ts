@@ -179,25 +179,55 @@ export const getItemDetails = async (identifier: string) => {
     const files = metadata.files || [];
     console.log(`Found ${files.length} files in the item`);
     
-    // Sort files by format priority (video/audio first)
+    // Enhanced format detection for video and audio files
     const sortedFiles = [...files].sort((a, b) => {
       const aFormat = (a.format || '').toLowerCase();
       const bFormat = (b.format || '').toLowerCase();
+      const aName = (a.name || '').toLowerCase();
+      const bName = (b.name || '').toLowerCase();
       
-      // Prioritize files with length property (duration)
+      // Check for known playable extensions first
+      const isAPlayable = isPlayableMediaFile(a);
+      const isBPlayable = isPlayableMediaFile(b);
+      
+      // Prioritize files with known playable formats
+      if (isAPlayable && !isBPlayable) return -1;
+      if (!isAPlayable && isBPlayable) return 1;
+      
+      // Then prioritize files with length property (duration)
       if (a.length && !b.length) return -1;
       if (!a.length && b.length) return 1;
       
+      // Then prioritize mp4 files which have better browser compatibility
+      if (aName.endsWith('.mp4') && !bName.endsWith('.mp4')) return -1;
+      if (!aName.endsWith('.mp4') && bName.endsWith('.mp4')) return 1;
+      
       // Then prioritize video and audio formats
-      const aIsMedia = aFormat.includes('video') || aFormat.includes('audio');
-      const bIsMedia = bFormat.includes('video') || bFormat.includes('audio');
+      const aIsVideo = aFormat.includes('video') || videoExtensions.some(ext => aName.endsWith(ext));
+      const bIsVideo = bFormat.includes('video') || videoExtensions.some(ext => bName.endsWith(ext));
+      const aIsAudio = aFormat.includes('audio') || audioExtensions.some(ext => aName.endsWith(ext));
+      const bIsAudio = bFormat.includes('audio') || audioExtensions.some(ext => bName.endsWith(ext));
       
-      if (aIsMedia && !bIsMedia) return -1;
-      if (!aIsMedia && bIsMedia) return 1;
+      if (aIsVideo && !bIsVideo) return -1;
+      if (!aIsVideo && bIsVideo) return 1;
+      if (aIsAudio && !bIsAudio) return -1;
+      if (!aIsAudio && bIsAudio) return 1;
       
-      // Default to name comparison
-      return (a.name || '').localeCompare(b.name || '');
+      // Default to file size (bigger files might be higher quality)
+      return (parseInt(b.size || '0', 10) - parseInt(a.size || '0', 10));
     });
+    
+    // Log the first playable file for debugging
+    const firstPlayableFile = sortedFiles.find(isPlayableMediaFile);
+    if (firstPlayableFile) {
+      console.log("First playable file:", firstPlayableFile);
+    } else {
+      console.log("No playable files found!");
+    }
+    
+    // Count playable episodes for debugging
+    const playableEpisodes = sortedFiles.filter(isPlayableMediaFile).length;
+    console.log(`Playable episodes found: ${playableEpisodes}`);
     
     // Format the data to be more consistent
     return {
@@ -219,6 +249,50 @@ export const getItemDetails = async (identifier: string) => {
     console.error("Error fetching item details:", error);
     throw error;
   }
+};
+
+// Define common video and audio file extensions for better format detection
+const videoExtensions = [
+  '.mp4', '.webm', '.mkv', '.mov', '.avi', '.mpg', '.mpeg', '.ogv', '.m4v', '.3gp', '.flv'
+];
+
+const audioExtensions = [
+  '.mp3', '.ogg', '.wav', '.flac', '.m4a', '.aac', '.opus'
+];
+
+// Helper function to check if a file is playable media
+export const isPlayableMediaFile = (file: any) => {
+  if (!file || !file.name) return false;
+  
+  const name = file.name.toLowerCase();
+  const format = (file.format || '').toLowerCase();
+  
+  // Check if it has a length property (duration)
+  if (file.length) {
+    // Media type detection based on file attributes
+    if (file.width && file.height) {
+      console.log("Media type detected: video");
+      return true; // Has dimensions, likely a video
+    } else {
+      return true; // Has length but no dimensions, likely audio
+    }
+  }
+  
+  // Check video formats
+  if (videoExtensions.some(ext => name.endsWith(ext)) || 
+      format.includes('video') || 
+      format.includes('matroska') ||  // For MKV files
+      format.includes('mpeg')) {
+    return true;
+  }
+  
+  // Check audio formats
+  if (audioExtensions.some(ext => name.endsWith(ext)) || 
+      format.includes('audio')) {
+    return true;
+  }
+  
+  return false;
 };
 
 export const getItemImageUrl = (identifier: string) => {

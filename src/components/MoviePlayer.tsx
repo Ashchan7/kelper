@@ -1,10 +1,13 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Settings } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
 
 interface MoviePlayerProps {
   src: string;
@@ -20,9 +23,14 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const [qualityLevel, setQualityLevel] = useState("auto");
+  const [lastTapTime, setLastTapTime] = useState(0);
+  const [tapPosition, setTapPosition] = useState({ x: 0, y: 0 });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   
   // Control visibility timer
   useEffect(() => {
@@ -153,6 +161,70 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     video.currentTime = newTime;
     setCurrentTime(newTime);
     setShowControls(true);
+    
+    toast({
+      title: seconds > 0 ? "Fast Forward" : "Rewind",
+      description: `${Math.abs(seconds)} seconds`,
+      duration: 1500,
+    });
+  };
+  
+  // Handle playback speed change
+  const handlePlaybackSpeedChange = (speed: string) => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const speedValue = parseFloat(speed);
+    video.playbackRate = speedValue;
+    setPlaybackSpeed(speedValue);
+    
+    toast({
+      title: "Playback Speed",
+      description: `${speed}x`,
+      duration: 1500,
+    });
+  };
+  
+  // Handle quality change (simulated as Archive.org doesn't support multiple qualities)
+  const handleQualityChange = (quality: string) => {
+    setQualityLevel(quality);
+    
+    toast({
+      title: "Video Quality",
+      description: quality === "auto" ? "Auto (Best quality)" : quality,
+      duration: 1500,
+    });
+    
+    // In a real implementation, this would switch video sources
+    // Since we can't actually change quality on archive.org videos, this is just UI feedback
+  };
+  
+  // Handle double tap gesture
+  const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapTime;
+    const player = playerRef.current;
+    
+    if (!player) return;
+    
+    // Detect if it's a double tap (300ms threshold)
+    if (timeSinceLastTap < 300) {
+      const rect = player.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const playerWidth = rect.width;
+      
+      // Determine if tap is on left or right side
+      if (x < playerWidth / 2) {
+        // Left side - rewind
+        skip(-10);
+      } else {
+        // Right side - fast forward
+        skip(10);
+      }
+    }
+    
+    setLastTapTime(now);
+    setTapPosition({ x: e.clientX, y: e.clientY });
   };
   
   return (
@@ -163,13 +235,17 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
       onMouseMove={() => setShowControls(true)}
+      onClick={handleTap}
     >
       <video
         ref={videoRef}
         src={src}
         poster={poster}
         className="w-full h-full object-contain"
-        onClick={togglePlay}
+        onClick={(e) => {
+          e.stopPropagation();
+          togglePlay();
+        }}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleMetadataLoaded}
         onEnded={() => setIsPlaying(false)}
@@ -210,7 +286,7 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
       >
         {/* Progress bar */}
         <div 
-          className="w-full h-1 mb-4 bg-white/30 rounded-full cursor-pointer"
+          className="w-full h-1.5 mb-4 bg-white/30 rounded-full cursor-pointer"
           onClick={handleSeek}
         >
           <div 
@@ -281,6 +357,70 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
                 className="w-full"
               />
             </div>
+            
+            {/* Playback Speed Control */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-white/80 hover:text-white hidden sm:flex"
+                >
+                  {playbackSpeed}x
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48" align="end">
+                <div className="space-y-1">
+                  <h4 className="font-medium mb-2">Playback Speed</h4>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0].map((speed) => (
+                      <Button 
+                        key={speed} 
+                        variant={playbackSpeed === speed ? "default" : "outline"}
+                        className="text-sm" 
+                        size="sm"
+                        onClick={() => handlePlaybackSpeedChange(speed.toString())}
+                      >
+                        {speed}x
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            {/* Quality Selection */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="text-white/80 hover:text-white hidden sm:flex"
+                  size="icon"
+                >
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56" align="end">
+                <div>
+                  <h4 className="font-medium mb-2">Video Quality</h4>
+                  <Select 
+                    value={qualityLevel} 
+                    onValueChange={handleQualityChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select quality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto (Recommended)</SelectItem>
+                      <SelectItem value="1080p">1080p</SelectItem>
+                      <SelectItem value="720p">720p</SelectItem>
+                      <SelectItem value="480p">480p</SelectItem>
+                      <SelectItem value="360p">360p</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </PopoverContent>
+            </Popover>
             
             <Button 
               variant="ghost" 

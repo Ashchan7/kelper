@@ -23,6 +23,7 @@ export interface SearchResponse {
 
 export type MediaType = "movies" | "audio" | "all";
 
+// Keep existing hooks and functions the same
 export const useArchiveSearch = (
   query: string,
   mediaType: MediaType = "all",
@@ -161,6 +162,7 @@ export const searchArchive = async (query: string, mediaType?: string) => {
 
 export const getItemDetails = async (identifier: string) => {
   try {
+    console.log(`Fetching item details for: ${identifier}`);
     const metadataResponse = await fetch(`https://archive.org/metadata/${identifier}`);
     
     if (!metadataResponse.ok) {
@@ -168,9 +170,34 @@ export const getItemDetails = async (identifier: string) => {
     }
     
     const metadata = await metadataResponse.json();
+    console.log("Metadata received:", metadata);
     
     // Add a thumbnailUrl property for easier access
     const thumbnailUrl = `https://archive.org/services/img/${identifier}`;
+    
+    // Pre-process files to identify playable media
+    const files = metadata.files || [];
+    console.log(`Found ${files.length} files in the item`);
+    
+    // Sort files by format priority (video/audio first)
+    const sortedFiles = [...files].sort((a, b) => {
+      const aFormat = (a.format || '').toLowerCase();
+      const bFormat = (b.format || '').toLowerCase();
+      
+      // Prioritize files with length property (duration)
+      if (a.length && !b.length) return -1;
+      if (!a.length && b.length) return 1;
+      
+      // Then prioritize video and audio formats
+      const aIsMedia = aFormat.includes('video') || aFormat.includes('audio');
+      const bIsMedia = bFormat.includes('video') || bFormat.includes('audio');
+      
+      if (aIsMedia && !bIsMedia) return -1;
+      if (!aIsMedia && bIsMedia) return 1;
+      
+      // Default to name comparison
+      return (a.name || '').localeCompare(b.name || '');
+    });
     
     // Format the data to be more consistent
     return {
@@ -186,7 +213,7 @@ export const getItemDetails = async (identifier: string) => {
       addedDate: metadata.metadata.publicdate,
       thumbnailUrl,
       downloads: parseInt(metadata.metadata.downloads || '0', 10),
-      files: metadata.files || [],
+      files: sortedFiles || [],
     };
   } catch (error) {
     console.error("Error fetching item details:", error);

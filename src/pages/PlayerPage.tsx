@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
@@ -84,18 +83,52 @@ const PlayerPage = () => {
   // Extract media files from item details
   const episodeFiles = itemDetails?.files || [];
   
-  // Improved handling of setting the initial media file
+  // Function to check if a file is a playable media file
+  const isPlayableMedia = (file: any) => {
+    if (!file || !file.name) return false;
+    
+    const name = file.name.toLowerCase();
+    const format = (file.format || '').toLowerCase();
+    
+    // Check if it has a length property (duration)
+    if (file.length) return true;
+    
+    // Check video formats
+    const isVideo = name.endsWith('.mp4') || 
+                    name.endsWith('.webm') || 
+                    name.endsWith('.mov') || 
+                    name.endsWith('.avi') || 
+                    name.endsWith('.mkv') || 
+                    name.endsWith('.ogv') ||
+                    name.endsWith('.mpg') ||
+                    name.endsWith('.mpeg') ||
+                    format.includes('video');
+    
+    // Check audio formats
+    const isAudio = name.endsWith('.mp3') || 
+                    name.endsWith('.ogg') || 
+                    name.endsWith('.wav') || 
+                    name.endsWith('.flac') || 
+                    name.endsWith('.m4a') || 
+                    name.endsWith('.aac') ||
+                    format.includes('audio');
+    
+    return isVideo || isAudio;
+  };
+  
+  // Improved handling of setting the initial media file with debugging
   useEffect(() => {
     if (itemDetails && episodeFiles.length > 0) {
       setMediaError(null);
+      console.log("Total files available:", episodeFiles.length);
       
       try {
         // Find the first video or audio file and set it as the active media
-        const firstPlayableFile = episodeFiles.find(file => 
-          file.format?.toLowerCase().includes("video") || file.format?.toLowerCase().includes("audio")
-        );
+        const playableFiles = episodeFiles.filter(isPlayableMedia);
+        console.log("Playable files found:", playableFiles.length);
         
-        if (firstPlayableFile) {
+        if (playableFiles.length > 0) {
+          const firstPlayableFile = playableFiles[0];
           const initialMediaUrl = `https://archive.org/download/${id}/${encodeURIComponent(firstPlayableFile.name)}`;
           setActiveMedia(initialMediaUrl);
           setActiveMediaTitle(firstPlayableFile.name);
@@ -106,6 +139,7 @@ const PlayerPage = () => {
             format: firstPlayableFile.format
           });
         } else {
+          console.warn("No playable media files found");
           setMediaError("No playable media files found for this item.");
         }
       } catch (err) {
@@ -183,14 +217,36 @@ const PlayerPage = () => {
     });
   };
   
-  // Handle media errors
-  const handleMediaError = (error: string) => {
-    setMediaError(error);
-    toast({
-      title: "Media Playback Error",
-      description: error,
-      variant: "destructive"
-    });
+  // Handle episode selection with improved error handling
+  const handleEpisodeSelect = (episodeUrl: string, episodeName: string, file?: any) => {
+    try {
+      setActiveMedia(episodeUrl);
+      setActiveMediaTitle(episodeName);
+      setMediaError(null);
+      
+      console.log("Selected media:", {
+        url: episodeUrl,
+        name: episodeName,
+        file: file
+      });
+      
+      // Test if the URL is valid
+      const validationImage = new Image();
+      validationImage.onerror = () => {
+        console.warn("Media URL validation failed");
+        // Don't set error here, let the players handle it
+      };
+      validationImage.src = episodeUrl;
+      
+    } catch (error) {
+      console.error("Error selecting episode:", error);
+      setMediaError("Unable to load selected media.");
+      toast({
+        title: "Media Error",
+        description: "Failed to load selected media. The file might be unavailable.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Check if files appear to be episodes based on filenames
@@ -282,7 +338,7 @@ const PlayerPage = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h1 className="text-2xl font-bold">
-                        {activeMediaTitle || itemDetails?.title || "Unknown Title"}
+                        {itemDetails?.title || "Unknown Title"}
                       </h1>
                       {itemDetails?.creator && (
                         <p className="text-gray-500 dark:text-gray-400">
@@ -372,10 +428,7 @@ const PlayerPage = () => {
                     episodeFiles={episodeFiles}
                     itemId={id!}
                     activeEpisode={activeMedia}
-                    onEpisodeSelect={(url, name) => {
-                      setActiveMedia(url);
-                      setActiveMediaTitle(name);
-                    }}
+                    onEpisodeSelect={handleEpisodeSelect}
                   />
                 </div>
               )}

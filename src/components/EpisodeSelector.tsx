@@ -23,41 +23,61 @@ interface EpisodeSelectorProps {
   onEpisodeSelect: (episodeUrl: string, episodeName: string, file?: MediaFile) => void;
 }
 
-// Check if file is a video file
+// Check if file is a video file with expanded file extensions
 const isVideoFile = (file: MediaFile) => {
   const name = file.name.toLowerCase();
   const format = (file.format || '').toLowerCase();
   
-  return (
-    name.endsWith('.mp4') || 
-    name.endsWith('.webm') || 
-    name.endsWith('.mov') ||
-    name.endsWith('.avi') ||
-    name.endsWith('.mkv') ||
-    name.endsWith('.ogv') ||
-    name.endsWith('.m4v') ||
-    format.includes('video')
-  );
+  const videoExtensions = [
+    '.mp4', '.webm', '.mov', '.avi', '.mkv', '.ogv', '.m4v', 
+    '.mpg', '.mpeg', '.3gp', '.flv', '.wmv', '.ts', '.mts', '.m2ts'
+  ];
+  
+  // Check if file has a video extension
+  const hasVideoExtension = videoExtensions.some(ext => name.endsWith(ext));
+  
+  // Check format information
+  const hasVideoFormat = format.includes('video') || 
+                         format.includes('mp4') || 
+                         format.includes('matroska') ||
+                         format.includes('webm') ||
+                         format.includes('x-msvideo');
+  
+  return hasVideoExtension || hasVideoFormat;
 };
 
-// Check if file is an audio file
+// Check if file is an audio file with expanded file extensions
 const isAudioFile = (file: MediaFile) => {
   const name = file.name.toLowerCase();
   const format = (file.format || '').toLowerCase();
   
-  return (
-    name.endsWith('.mp3') || 
-    name.endsWith('.ogg') || 
-    name.endsWith('.wav') || 
-    name.endsWith('.flac') ||
-    name.endsWith('.m4a') ||
-    name.endsWith('.aac') ||
-    format.includes('audio')
-  );
+  const audioExtensions = [
+    '.mp3', '.ogg', '.wav', '.flac', '.m4a', '.aac', '.opus',
+    '.wma', '.alac', '.aiff', '.ape', '.wv', '.midi', '.mid'
+  ];
+  
+  // Check if file has an audio extension
+  const hasAudioExtension = audioExtensions.some(ext => name.endsWith(ext));
+  
+  // Check format information
+  const hasAudioFormat = format.includes('audio') || 
+                         format.includes('mp3') || 
+                         format.includes('ogg') || 
+                         format.includes('wav') ||
+                         format.includes('mpeg');
+  
+  return hasAudioExtension || hasAudioFormat;
 };
 
-// Check if file is a valid media file for playback
+// Check if file appears to be a valid media file for playback
+// Expanded to consider more properties that indicate playable media
 const isPlayableMedia = (file: MediaFile) => {
+  // If file has a length property, it's likely a playable media
+  if (file.length) {
+    return true;
+  }
+  
+  // Check by file format and extension
   return isVideoFile(file) || isAudioFile(file);
 };
 
@@ -70,9 +90,15 @@ const EpisodeSelector = ({
   const [view, setView] = useState<"list" | "grid">("list");
   const { toast } = useToast();
   
+  // Add debugging logs
+  console.log("Episode files:", episodeFiles);
+  
   // Determine if these are video episodes or audio tracks
   const firstPlayableFile = episodeFiles.find(isPlayableMedia);
   const mediaType = firstPlayableFile && isVideoFile(firstPlayableFile) ? 'video' : 'audio';
+  
+  console.log("Media type detected:", mediaType);
+  console.log("First playable file:", firstPlayableFile);
   
   // Extract episode number and name from filename
   const getEpisodeInfo = (filename: string) => {
@@ -99,9 +125,9 @@ const EpisodeSelector = ({
       }
     }
     
-    // Clean up the name
+    // Clean up the name - expand the list of extensions to remove
     episodeName = filename
-      .replace(/\.(mp4|webm|mov|avi|mkv|ogv|m4v|mp3|ogg|wav|flac|m4a)$/i, "")  // Remove extension
+      .replace(/\.(mp4|webm|mov|avi|mkv|ogv|m4v|mp3|ogg|wav|flac|m4a|aac|opus|wma|mpg|mpeg|3gp|flv|wmv)$/i, "")  // Remove extension
       .replace(/[\._]/g, " ")                              // Replace dots and underscores with spaces
       .replace(/\b(EP|E|Episode|Part|Track)\s*\d+\b/i, "")       // Remove episode markers
       .trim();
@@ -160,7 +186,10 @@ const EpisodeSelector = ({
         console.log("Selected episode:", {
           url: episodeUrl,
           name: file.name,
-          format: file.format
+          format: file.format,
+          isPlayable: isPlayableMedia(file),
+          isVideo: isVideoFile(file),
+          isAudio: isAudioFile(file)
         });
         
         onEpisodeSelect(episodeUrl, getEpisodeInfo(file.name).displayName, file);
@@ -191,6 +220,8 @@ const EpisodeSelector = ({
   
   // Filter for only playable media files
   const playableEpisodes = sortedEpisodes.filter(isPlayableMedia);
+  
+  console.log("Playable episodes found:", playableEpisodes.length);
   
   return (
     <motion.div
@@ -248,7 +279,7 @@ const EpisodeSelector = ({
                 >
                   <div className="mr-4 relative">
                     <div className="w-28 h-16 bg-black/30 rounded flex items-center justify-center overflow-hidden">
-                      {mediaType === 'video' ? (
+                      {isVideoFile(file) ? (
                         <FileVideo className="w-8 h-8 text-gray-400" />
                       ) : (
                         <FileAudio className="w-8 h-8 text-gray-400" />
@@ -268,9 +299,12 @@ const EpisodeSelector = ({
                       {file.length && (
                         <span className="mr-3">{formatDuration(file.length)}</span>
                       )}
-                      {mediaType === 'video' && file.height && file.width && (
+                      {isVideoFile(file) && file.height && file.width && (
                         <span className="mr-3">{file.height}p</span>
                       )}
+                      <span className="text-xs text-gray-500">
+                        {file.format || file.name.split('.').pop()?.toUpperCase() || ''}
+                      </span>
                     </div>
                   </div>
                   <Button 
@@ -304,7 +338,7 @@ const EpisodeSelector = ({
                   >
                     <div className="relative mb-2">
                       <div className="aspect-video bg-black/30 rounded flex items-center justify-center overflow-hidden">
-                        {mediaType === 'video' ? (
+                        {isVideoFile(file) ? (
                           <FileVideo className="w-8 h-8 text-gray-400" />
                         ) : (
                           <Disc3 className="w-8 h-8 text-gray-400" />
@@ -335,6 +369,9 @@ const EpisodeSelector = ({
                         {file.length && (
                           <span className="mr-2">{formatDuration(file.length)}</span>
                         )}
+                        <span className="text-xs text-gray-500">
+                          {file.format || file.name.split('.').pop()?.toUpperCase() || ''}
+                        </span>
                       </div>
                     </div>
                   </motion.div>

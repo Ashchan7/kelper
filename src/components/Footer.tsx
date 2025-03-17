@@ -75,16 +75,11 @@ const Footer = () => {
             <div>
               <h3 className="text-sm font-medium">Contact</h3>
               <div className="flex flex-col mt-4 space-y-2">
-                <a href="mailto:contact@kelper.com" className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a href="mailto:thekelperzone@gmail.com" className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
                   <Mail className="w-4 h-4 mr-2" />
-                  contact@kelper.com
+                  thekelperzone@gmail.com
                 </a>
-                <a href="tel:+1234567890" className="text-sm text-muted-foreground hover:text-foreground transition-colors">+1 (234) 567-890</a>
-                <address className="text-sm text-muted-foreground not-italic">
-                  Kelper Media, Inc.<br />
-                  123 Archive Street<br />
-                  San Francisco, CA 94103
-                </address>
+                <a href="tel:+918140174094" className="text-sm text-muted-foreground hover:text-foreground transition-colors">+91 8140174094</a>
               </div>
             </div>
           </div>

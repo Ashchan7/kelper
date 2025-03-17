@@ -210,8 +210,41 @@ const PlayerPage = () => {
     return null;
   };
   
+  // Check if file is a valid media file for playback
+  const isPlayableMedia = (file: any) => {
+    if (!file || !file.name) return false;
+    
+    const name = file.name.toLowerCase();
+    const format = (file.format || '').toLowerCase();
+    
+    if (mediaType === 'movies') {
+      return (
+        name.endsWith('.mp4') || 
+        name.endsWith('.webm') || 
+        name.endsWith('.mov') ||
+        name.endsWith('.avi') ||
+        name.endsWith('.mkv') ||
+        name.endsWith('.ogv') ||
+        name.endsWith('.m4v') ||
+        format.includes('video')
+      );
+    } else if (mediaType === 'audio') {
+      return (
+        name.endsWith('.mp3') || 
+        name.endsWith('.ogg') || 
+        name.endsWith('.wav') || 
+        name.endsWith('.flac') ||
+        name.endsWith('.m4a') ||
+        format.includes('audio')
+      );
+    }
+    
+    return false;
+  };
+  
   // Handle episode selection
   const handleEpisodeSelect = (url: string, title: string) => {
+    console.log("Episode selected:", url, title);
     setActiveMediaUrl(url);
     setActiveMediaTitle(title);
   };
@@ -233,31 +266,36 @@ const PlayerPage = () => {
   const getMainMediaFile = () => {
     if (!mediaFiles.length) return null;
     
+    // First filter to only get playable media files
+    const playableFiles = mediaFiles.filter(isPlayableMedia);
+    
+    if (playableFiles.length === 0) return null;
+    
     if (mediaType === 'movies') {
       // First try to find a file with a standard video extension
-      const standardVideo = mediaFiles.find(file => 
+      const standardVideo = playableFiles.find(file => 
         file.name.toLowerCase().match(/\.(mp4|webm|mov)$/i)
       );
       
       if (standardVideo) return standardVideo;
       
       // If no standard video found, sort by size (typically the largest file is the main movie)
-      const sortedFiles = [...mediaFiles].sort((a, b) => (b.size || 0) - (a.size || 0));
+      const sortedFiles = [...playableFiles].sort((a, b) => (b.size || 0) - (a.size || 0));
       
       return sortedFiles[0];
     } else if (mediaType === 'audio') {
       // For audio, prefer MP3 format
-      const mp3File = mediaFiles.find(file => 
+      const mp3File = playableFiles.find(file => 
         file.name.toLowerCase().endsWith('.mp3')
       );
       
       if (mp3File) return mp3File;
       
       // Otherwise take the first audio file
-      return mediaFiles[0];
+      return playableFiles[0];
     }
     
-    return mediaFiles[0];
+    return playableFiles[0];
   };
   
   const mainMediaFile = getMainMediaFile();
@@ -327,7 +365,7 @@ const PlayerPage = () => {
             </Link>
           </Button>
           
-          <h1 className="text-2xl font-medium text-center flex-1 mx-4">
+          <h1 className="text-2xl font-medium text-center flex-1 mx-4 truncate">
             {activeMediaTitle || itemDetails?.title || "Media Player"}
           </h1>
           
@@ -379,14 +417,14 @@ const PlayerPage = () => {
         </motion.div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          {/* About Panel - takes up 2/3 of space */}
+          {/* About Panel - takes up 2/3 of space on desktop */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="md:col-span-2"
           >
-            <Tabs defaultValue="about">
+            <Tabs defaultValue={hasMultipleEpisodes ? "episodes" : "about"}>
               <TabsList className="mb-4">
                 <TabsTrigger value="about">About</TabsTrigger>
                 {hasMultipleEpisodes && (
@@ -475,7 +513,7 @@ const PlayerPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="hidden md:block"
+              className="hidden md:block h-[400px]"
             >
               <EpisodeSelector 
                 episodeFiles={mediaFiles}
@@ -499,7 +537,7 @@ const PlayerPage = () => {
             <div className="overflow-hidden bg-white/5 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-white/5 rounded-xl">
               <div className="max-h-64 overflow-y-auto">
                 <table className="w-full">
-                  <thead className="bg-black/10 dark:bg-white/5">
+                  <thead className="bg-black/10 dark:bg-white/5 sticky top-0 z-10">
                     <tr>
                       <th className="text-left p-3 font-medium">Name</th>
                       <th className="text-left p-3 font-medium hidden md:table-cell">Type</th>

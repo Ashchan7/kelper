@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { List, Play, FileVideo } from "lucide-react";
@@ -103,25 +104,56 @@ const EpisodeSelector = ({
     }
   };
   
-  const handleEpisodeSelect = (file: MediaFile) => {
-    const episodeUrl = `https://archive.org/download/${itemId}/${encodeURIComponent(file.name)}`;
-    onEpisodeSelect(episodeUrl, getEpisodeInfo(file.name).displayName);
+  // Check if file is a valid media file for playback
+  const isPlayableMedia = (file: MediaFile) => {
+    const name = file.name.toLowerCase();
+    const format = (file.format || '').toLowerCase();
     
-    toast({
-      title: "Playing episode",
-      description: getEpisodeInfo(file.name).displayName,
-      duration: 2000,
-    });
+    // Check if it's a video file
+    return (
+      name.endsWith('.mp4') || 
+      name.endsWith('.webm') || 
+      name.endsWith('.mov') ||
+      name.endsWith('.avi') ||
+      name.endsWith('.mkv') ||
+      name.endsWith('.ogv') ||
+      name.endsWith('.m4v') ||
+      format.includes('video')
+    );
   };
+  
+  const handleEpisodeSelect = (file: MediaFile) => {
+    // Only proceed if this is a valid media file
+    if (isPlayableMedia(file)) {
+      const episodeUrl = `https://archive.org/download/${itemId}/${encodeURIComponent(file.name)}`;
+      onEpisodeSelect(episodeUrl, getEpisodeInfo(file.name).displayName);
+      
+      toast({
+        title: "Playing episode",
+        description: getEpisodeInfo(file.name).displayName,
+        duration: 2000,
+      });
+    } else {
+      toast({
+        title: "Cannot play this file",
+        description: "This file format is not supported for playback.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
+  
+  // Filter for only playable media files
+  const playableEpisodes = sortedEpisodes.filter(isPlayableMedia);
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="w-full bg-black/10 dark:bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden"
+      className="w-full bg-black/10 dark:bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden h-full flex flex-col"
     >
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-medium">Episodes</h3>
           <div className="flex gap-1">
@@ -135,60 +167,66 @@ const EpisodeSelector = ({
             </Button>
           </div>
         </div>
-        <p className="text-sm text-gray-400">{episodeFiles.length} episode{episodeFiles.length !== 1 ? 's' : ''} available</p>
+        <p className="text-sm text-gray-400">{playableEpisodes.length} episode{playableEpisodes.length !== 1 ? 's' : ''} available</p>
       </div>
       
-      <ScrollArea className="h-[380px] max-h-[50vh]">
+      <ScrollArea className="flex-grow overflow-y-auto" style={{ maxHeight: 'calc(100% - 80px)' }}>
         <div className="p-2">
-          {sortedEpisodes.map((file, index) => (
-            <motion.div 
-              key={file.name}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className={`flex items-center p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
-                activeEpisode.includes(encodeURIComponent(file.name)) 
-                  ? 'bg-primary/20 border border-primary/30' 
-                  : 'hover:bg-white/5 border border-transparent'
-              }`}
-              onClick={() => handleEpisodeSelect(file)}
-            >
-              <div className="mr-4 relative">
-                <div className="w-28 h-16 bg-black/30 rounded flex items-center justify-center overflow-hidden">
-                  <FileVideo className="w-8 h-8 text-gray-400" />
-                </div>
-                {activeEpisode.includes(encodeURIComponent(file.name)) && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded">
-                    <Play className="w-8 h-8 text-white" fill="white" />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">
-                  {getEpisodeInfo(file.name).displayName}
-                </p>
-                <div className="flex items-center mt-1 text-xs text-gray-400">
-                  {file.length && (
-                    <span className="mr-3">{formatDuration(file.length)}</span>
-                  )}
-                  {file.height && file.width && (
-                    <span className="mr-3">{file.height}p</span>
-                  )}
-                </div>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="ml-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEpisodeSelect(file);
-                }}
+          {playableEpisodes.length > 0 ? (
+            playableEpisodes.map((file, index) => (
+              <motion.div 
+                key={file.name}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className={`flex items-center p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
+                  activeEpisode.includes(encodeURIComponent(file.name)) 
+                    ? 'bg-primary/20 border border-primary/30' 
+                    : 'hover:bg-white/5 border border-transparent'
+                }`}
+                onClick={() => handleEpisodeSelect(file)}
               >
-                <Play className="h-4 w-4" />
-              </Button>
-            </motion.div>
-          ))}
+                <div className="mr-4 relative">
+                  <div className="w-28 h-16 bg-black/30 rounded flex items-center justify-center overflow-hidden">
+                    <FileVideo className="w-8 h-8 text-gray-400" />
+                  </div>
+                  {activeEpisode.includes(encodeURIComponent(file.name)) && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded">
+                      <Play className="w-8 h-8 text-white" fill="white" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">
+                    {getEpisodeInfo(file.name).displayName}
+                  </p>
+                  <div className="flex items-center mt-1 text-xs text-gray-400">
+                    {file.length && (
+                      <span className="mr-3">{formatDuration(file.length)}</span>
+                    )}
+                    {file.height && file.width && (
+                      <span className="mr-3">{file.height}p</span>
+                    )}
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="ml-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEpisodeSelect(file);
+                  }}
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            ))
+          ) : (
+            <div className="p-4 text-center text-gray-400">
+              No playable episodes found. Try viewing the content on Archive.org directly.
+            </div>
+          )}
         </div>
       </ScrollArea>
     </motion.div>

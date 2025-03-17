@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
@@ -7,11 +8,10 @@ import {
   ExternalLink,
   Share2,
   Heart,
-  HeartFilled,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { getArchiveItemDetails, getRelatedItems } from "@/services/archiveApi";
+import { getItemDetails } from "@/services/archiveApi";
 import { useFavorites } from "@/providers/FavoritesProvider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,10 +20,12 @@ import MoviePlayer from "@/components/MoviePlayer";
 import MusicPlayer from "@/components/MusicPlayer";
 import ContentGrid from "@/components/ContentGrid";
 import EpisodeSelector from "@/components/EpisodeSelector";
+import { useToast } from "@/hooks/use-toast";
 
 const PlayerPage = () => {
   const { mediaType, id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeMedia, setActiveMedia] = useState<string>("");
   const [activeMediaTitle, setActiveMediaTitle] = useState<string>("");
   const { favorites, addFavorite, removeFavorite } = useFavorites();
@@ -32,18 +34,37 @@ const PlayerPage = () => {
   // Fetch item details
   const { data: itemDetails, isLoading, error } = useQuery({
     queryKey: ["itemDetails", id],
-    queryFn: () => getArchiveItemDetails(id!),
+    queryFn: () => getItemDetails(id!),
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
-  // Fetch related items
-  const { data: relatedItems, isLoading: isRelatedLoading, error: relatedError } = useQuery({
+  // Fetch related items - dummy data for now
+  const { data: relatedItems, isLoading: isRelatedLoading } = useQuery({
     queryKey: ["relatedItems", id],
-    queryFn: () => getRelatedItems(id!),
-    enabled: !!id,
+    queryFn: () => getRelatedItemsFromCollection(id!),
+    enabled: !!id && !!itemDetails?.collection?.[0],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Function to get related items from collection
+  const getRelatedItemsFromCollection = async (itemId: string) => {
+    if (!itemDetails?.collection || itemDetails.collection.length === 0) {
+      return [];
+    }
+    
+    const collection = itemDetails.collection[0];
+    const url = `https://archive.org/advancedsearch.php?q=collection:${encodeURIComponent(collection)}&output=json&rows=10&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=downloads desc`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("Failed to fetch related items");
+    }
+    
+    const data = await response.json();
+    // Filter out the current item
+    return data.response.docs.filter((item: any) => item.identifier !== itemId);
+  };
   
   // Extract media files from item details
   const episodeFiles = itemDetails?.files || [];
@@ -75,6 +96,10 @@ const PlayerPage = () => {
     if (itemDetails) {
       if (isFavorite) {
         removeFavorite(itemDetails.identifier);
+        toast({
+          title: "Removed from favorites",
+          description: `"${itemDetails.title}" has been removed from your favorites.`
+        });
       } else {
         addFavorite({
           id: itemDetails.identifier,
@@ -82,6 +107,10 @@ const PlayerPage = () => {
           creator: itemDetails.creator,
           thumbnailUrl: itemDetails.thumbnailUrl,
           mediaType: mediaType!,
+        });
+        toast({
+          title: "Added to favorites",
+          description: `"${itemDetails.title}" has been added to your favorites.`
         });
       }
       setIsFavorite(!isFavorite);
@@ -109,9 +138,17 @@ const PlayerPage = () => {
   // Helper function to copy to clipboard
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      alert("Link copied to clipboard!");
+      toast({
+        title: "Link copied!",
+        description: "Link has been copied to clipboard."
+      });
     }, (err) => {
       console.error("Failed to copy: ", err);
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy link to clipboard.",
+        variant: "destructive"
+      });
     });
   };
   
@@ -148,7 +185,7 @@ const PlayerPage = () => {
             <div className="w-full lg:w-2/3 flex flex-col">
               {/* Media Player */}
               <div className="bg-black/10 dark:bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden mb-4">
-                {mediaType === "video" ? (
+                {mediaType === "video" || mediaType === "movies" ? (
                   <MoviePlayer
                     src={activeMedia}
                     title={activeMediaTitle}
@@ -156,9 +193,9 @@ const PlayerPage = () => {
                   />
                 ) : (
                   <MusicPlayer
-                    src={activeMedia}
+                    audioSrc={activeMedia}
                     title={activeMediaTitle}
-                    cover={itemDetails?.thumbnailUrl || ""}
+                    coverArt={itemDetails?.thumbnailUrl || ""}
                     artist={itemDetails?.creator || "Unknown Artist"}
                   />
                 )}
@@ -190,11 +227,7 @@ const PlayerPage = () => {
                       onClick={toggleFavorite}
                       className={isFavorite ? "text-white" : ""}
                     >
-                      {isFavorite ? (
-                        <HeartFilled className="w-5 h-5 text-white" />
-                      ) : (
-                        <Heart className="w-5 h-5" />
-                      )}
+                      <Heart className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`} />
                     </Button>
                   </div>
                   
@@ -258,7 +291,7 @@ const PlayerPage = () => {
                 </div>
               </div>
               
-              {/* Only show the episode selector here - removed the duplicate one */}
+              {/* Only show the episode selector here */}
               {hasEpisodes && (
                 <div className="h-[400px]">
                   <EpisodeSelector
@@ -292,10 +325,8 @@ const PlayerPage = () => {
               </div>
             ) : (
               <ContentGrid 
-                items={relatedItems}
-                mediaType={mediaType}
+                items={relatedItems || []}
                 isLoading={isRelatedLoading}
-                error={relatedError}
               />
             )}
           </div>

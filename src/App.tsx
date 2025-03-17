@@ -21,6 +21,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import Layout from "./components/Layout";
 import { ThemeProvider } from "./components/theme-provider";
 import AuthProvider from "./providers/AuthProvider";
+import { FavoritesProvider } from "./providers/FavoritesProvider";
 import { Toaster } from "./components/ui/toaster";
 
 // Initialize React Query
@@ -119,10 +120,12 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark">
       <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-          <Toaster />
-        </QueryClientProvider>
+        <FavoritesProvider>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+            <Toaster />
+          </QueryClientProvider>
+        </FavoritesProvider>
       </AuthProvider>
     </ThemeProvider>
   );

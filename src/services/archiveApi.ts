@@ -127,15 +127,67 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
   return { data, isLoading, error };
 };
 
-export const getItemDetails = async (identifier: string): Promise<any> => {
+export const searchArchive = async (query: string, mediaType?: string) => {
+  if (!query) {
+    return [];
+  }
+
   try {
-    const response = await fetch(`https://archive.org/metadata/${identifier}`);
+    // Build the Internet Archive search URL
+    let searchQuery = query;
+    
+    // Add media type filter if specified
+    if (mediaType) {
+      searchQuery += ` AND mediatype:${mediaType}`;
+    }
+    
+    const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(
+      searchQuery
+    )}&output=json&rows=20&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=downloads desc`;
+
+    const response = await fetch(url);
     
     if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    
+    const responseData = await response.json();
+    return responseData.response.docs;
+  } catch (err) {
+    console.error("Error searching archive:", err);
+    throw err;
+  }
+};
+
+export const getItemDetails = async (identifier: string) => {
+  try {
+    const metadataResponse = await fetch(`https://archive.org/metadata/${identifier}`);
+    
+    if (!metadataResponse.ok) {
       throw new Error("Failed to fetch item details");
     }
     
-    return await response.json();
+    const metadata = await metadataResponse.json();
+    
+    // Add a thumbnailUrl property for easier access
+    const thumbnailUrl = `https://archive.org/services/img/${identifier}`;
+    
+    // Format the data to be more consistent
+    return {
+      ...metadata.metadata,
+      identifier: metadata.metadata.identifier,
+      title: metadata.metadata.title,
+      description: metadata.metadata.description,
+      creator: metadata.metadata.creator,
+      collection: Array.isArray(metadata.metadata.collection) 
+                  ? metadata.metadata.collection 
+                  : [metadata.metadata.collection],
+      date: metadata.metadata.date,
+      addedDate: metadata.metadata.publicdate,
+      thumbnailUrl,
+      downloads: parseInt(metadata.metadata.downloads || '0', 10),
+      files: metadata.files || [],
+    };
   } catch (error) {
     console.error("Error fetching item details:", error);
     throw error;

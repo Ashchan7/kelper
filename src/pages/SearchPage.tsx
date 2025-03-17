@@ -132,7 +132,7 @@ const renderSearchResults = (results: any, isLoading: boolean, error: any, query
     );
   }
   
-  return <ContentGrid items={results} />;
+  return <ContentGrid items={results} isLoading={false} />;
 };
 
 export default SearchPage;

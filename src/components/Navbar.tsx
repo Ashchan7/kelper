@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "./theme-provider";
-import { Search, Sun, Moon, Menu, X, ChevronRight, LogOut, Home, Film, Music, Heart, Info } from "lucide-react";
+import { Search, Menu, X, ChevronRight, LogOut, Home, Film, Music, Heart, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "@/providers/AuthProvider";
@@ -47,7 +47,7 @@ const Navbar = ({ className = "" }: NavbarProps) => {
 
   return (
     <motion.header
-      className={`fixed top-0 left-0 right-0 z-50 px-6 md:px-10 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 md:px-10 transition-all duration-300 ${
         isScrolled || isMenuOpen
           ? "bg-white/80 dark:bg-black/80 backdrop-blur-lg py-4"
           : "bg-transparent py-6"
@@ -68,9 +68,15 @@ const Navbar = ({ className = "" }: NavbarProps) => {
           </motion.div>
         </Link>
 
-        {/* Desktop Navigation - Only show on desktop if using sidebar */}
-        {!isMobile && (
-          <nav className="hidden md:flex items-center gap-4">
+        {/* Desktop Navigation - Show on all screen sizes now */}
+        <nav className="hidden md:flex items-center space-x-6">
+          <NavLink to="/" label="Home" />
+          <NavLink to="/movies" label="Movies" />
+          <NavLink to="/music" label="Music" />
+          <NavLink to="/favorites" label="Favorites" />
+          <NavLink to="/about" label="About" />
+          
+          <div className="flex items-center gap-4 ml-2">
             <Link 
               to="/search" 
               className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -79,25 +85,29 @@ const Navbar = ({ className = "" }: NavbarProps) => {
             </Link>
             
             <ThemeToggle />
-          </nav>
-        )}
+          </div>
+        </nav>
 
         {/* Mobile Navigation */}
-        {isMobile && (
-          <div className="flex md:hidden items-center gap-4">
-            <ThemeToggle />
-            <button 
-              onClick={toggleMenu}
-              className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-            >
-              {isMenuOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-        )}
+        <div className="flex md:hidden items-center gap-4">
+          <Link 
+            to="/search" 
+            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            <Search className="w-5 h-5" />
+          </Link>
+          <ThemeToggle />
+          <button 
+            onClick={toggleMenu}
+            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          >
+            {isMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu - Improved with better blur effect */}

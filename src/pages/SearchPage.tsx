@@ -11,7 +11,6 @@ import ContentGrid from "@/components/ContentGrid";
 import { useToast } from "@/hooks/use-toast";
 
 import { useArchiveSearch } from "@/services/archiveApi";
-import { useQuery } from "@tanstack/react-query";
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,7 +40,7 @@ const SearchPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="space-y-8"
+        className="space-y-6 md:space-y-8"
       >
         {/* Search Bar */}
         <div className="space-y-4">
@@ -51,7 +50,7 @@ const SearchPage = () => {
           <SearchBar 
             onSearch={handleSearch} 
             placeholder="Search for movies, music..."
-            className="mt-4"
+            className="mt-4 w-full"
           />
         </div>
 
@@ -63,14 +62,14 @@ const SearchPage = () => {
             onValueChange={(value) => setActiveTab(value as "all" | "movies" | "music")}
             className="w-full"
           >
-            <div className="flex items-center justify-between mb-4">
-              <TabsList>
-                <TabsTrigger value="all">All Results</TabsTrigger>
-                <TabsTrigger value="movies">Movies</TabsTrigger>
-                <TabsTrigger value="music">Music</TabsTrigger>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <TabsList className="h-auto p-1">
+                <TabsTrigger value="all" className="px-3 py-1.5 text-sm">All Results</TabsTrigger>
+                <TabsTrigger value="movies" className="px-3 py-1.5 text-sm">Movies</TabsTrigger>
+                <TabsTrigger value="music" className="px-3 py-1.5 text-sm">Music</TabsTrigger>
               </TabsList>
               
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2 self-start sm:self-auto">
                 <Filter className="w-4 h-4" />
                 Filters
               </Button>

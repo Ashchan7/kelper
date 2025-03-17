@@ -32,7 +32,7 @@ const ContentGrid = ({
           </div>
         )}
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="aspect-[4/3] rounded-xl" />
           ))}
@@ -101,7 +101,7 @@ const ContentGrid = ({
       )}
       
       {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {items.map((item, index) => (
             <ContentCard key={item.identifier} item={item} index={index} />
           ))}
@@ -111,11 +111,11 @@ const ContentGrid = ({
           {items.map((item, index) => (
             <motion.div
               key={item.identifier}
-              className="flex flex-col md:flex-row gap-4 bg-white/5 dark:bg-black/20 backdrop-blur-sm border border-white/10 dark:border-white/5 hover:border-white/20 dark:hover:border-white/10 rounded-xl overflow-hidden transition-all duration-300"
+              className="flex flex-col md:flex-row gap-4 neo-card overflow-hidden transition-all duration-300 hover:shadow-lg"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
-              whileHover={{ x: 5 }}
+              whileHover={{ scale: 1.01, x: 0 }}
             >
               <div className="md:w-48 h-48 md:h-auto">
                 <img 
@@ -128,7 +128,7 @@ const ContentGrid = ({
                 />
               </div>
               <div className="flex-1 p-4">
-                <h3 className="font-medium mb-2">{item.title}</h3>
+                <h3 className="font-medium mb-2 line-clamp-1">{item.title}</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
                   {item.description || "No description available"}
                 </p>

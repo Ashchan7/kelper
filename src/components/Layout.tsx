@@ -18,11 +18,10 @@ const Layout = () => {
       <Navbar />
       
       <div className="flex flex-1">
-        {/* Sidebar for desktop only - mobile uses QuickLinks */}
-        <SidebarNavigation />
+        {/* Don't show sidebar at all anymore since navigation links are in header */}
         
         <motion.main
-          className="flex-grow"
+          className="flex-grow w-full"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}

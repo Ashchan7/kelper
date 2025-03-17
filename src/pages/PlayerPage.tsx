@@ -33,24 +33,26 @@ const PlayerPage = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   
-  // Fetch item details with better error handling - fixed onError implementation
+  // Fetch item details with proper error handling for current React Query version
   const { data: itemDetails, isLoading, error, refetch } = useQuery({
     queryKey: ["itemDetails", id],
     queryFn: () => getItemDetails(id!),
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
-    onSettled: (data, error) => {
-      if (error) {
-        console.error("Error fetching item details:", error);
-        toast({
-          title: "Error loading content",
-          description: "There was a problem loading the media details. Please try again.",
-          variant: "destructive"
-        });
-      }
-    }
+    retry: 2
   });
+  
+  // Handle error side effect outside the query config
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching item details:", error);
+      toast({
+        title: "Error loading content",
+        description: "There was a problem loading the media details. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [error, toast]);
   
   // Function to get related items from collection
   const getRelatedItemsFromCollection = async (itemId: string) => {

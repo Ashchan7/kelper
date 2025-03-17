@@ -572,7 +572,7 @@ const AudioPlayer = ({ tracks, initialTrackIndex = 0, onTrackChange }: AudioPlay
         </Tabs>
       </motion.div>
       
-      <style jsx="true">{`
+      <style>{`
         @keyframes soundwave {
           0% {
             height: 0.5rem;

@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { List, Play, FileVideo, FileAudio, Music, Grid, Disc3 } from "lucide-react";
+import { List, Play, FileVideo, FileAudio, FileMusic, Grid, Disc3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -152,14 +153,32 @@ const EpisodeSelector = ({
   const handleEpisodeSelect = (file: MediaFile) => {
     // Only proceed if this is a valid media file
     if (isPlayableMedia(file)) {
-      const episodeUrl = `https://archive.org/download/${itemId}/${encodeURIComponent(file.name)}`;
-      onEpisodeSelect(episodeUrl, getEpisodeInfo(file.name).displayName, file);
-      
-      toast({
-        title: mediaType === 'video' ? "Playing episode" : "Playing track",
-        description: getEpisodeInfo(file.name).displayName,
-        duration: 2000,
-      });
+      try {
+        // Construct a clean URL with proper encoding
+        const episodeUrl = `https://archive.org/download/${itemId}/${encodeURIComponent(file.name)}`;
+        
+        console.log("Selected episode:", {
+          url: episodeUrl,
+          name: file.name,
+          format: file.format
+        });
+        
+        onEpisodeSelect(episodeUrl, getEpisodeInfo(file.name).displayName, file);
+        
+        toast({
+          title: mediaType === 'video' ? "Loading episode" : "Loading track",
+          description: getEpisodeInfo(file.name).displayName,
+          duration: 2000,
+        });
+      } catch (error) {
+        console.error("Error selecting episode:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load selected media file",
+          variant: "destructive",
+          duration: 3000,
+        });
+      }
     } else {
       toast({
         title: "Cannot play this file",

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
@@ -21,6 +20,7 @@ import MusicPlayer from "@/components/MusicPlayer";
 import ContentGrid from "@/components/ContentGrid";
 import EpisodeSelector from "@/components/EpisodeSelector";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const PlayerPage = () => {
   const { mediaType, id } = useParams();
@@ -30,23 +30,25 @@ const PlayerPage = () => {
   const [activeMediaTitle, setActiveMediaTitle] = useState<string>("");
   const { favorites, addFavorite, removeFavorite } = useFavorites();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
   
-  // Fetch item details
-  const { data: itemDetails, isLoading, error } = useQuery({
+  // Fetch item details with better error handling
+  const { data: itemDetails, isLoading, error, refetch } = useQuery({
     queryKey: ["itemDetails", id],
     queryFn: () => getItemDetails(id!),
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    onError: (err) => {
+      console.error("Error fetching item details:", err);
+      toast({
+        title: "Error loading content",
+        description: "There was a problem loading the media details. Please try again.",
+        variant: "destructive"
+      });
+    }
   });
   
-  // Fetch related items
-  const { data: relatedItems, isLoading: isRelatedLoading } = useQuery({
-    queryKey: ["relatedItems", id],
-    queryFn: () => getRelatedItemsFromCollection(id!),
-    enabled: !!id && !!itemDetails?.collection?.[0],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
   // Function to get related items from collection
   const getRelatedItemsFromCollection = async (itemId: string) => {
     if (!itemDetails?.collection || itemDetails.collection.length === 0) {
@@ -66,20 +68,44 @@ const PlayerPage = () => {
     return data.response.docs.filter((item: any) => item.identifier !== itemId);
   };
   
+  // Fetch related items
+  const { data: relatedItems, isLoading: isRelatedLoading } = useQuery({
+    queryKey: ["relatedItems", id],
+    queryFn: () => getRelatedItemsFromCollection(id!),
+    enabled: !!id && !!itemDetails?.collection?.[0],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+  
   // Extract media files from item details
   const episodeFiles = itemDetails?.files || [];
   
+  // Improved handling of setting the initial media file
   useEffect(() => {
     if (itemDetails && episodeFiles.length > 0) {
-      // Find the first video or audio file and set it as the active media
-      const firstPlayableFile = episodeFiles.find(file => 
-        file.format?.toLowerCase().includes("video") || file.format?.toLowerCase().includes("audio")
-      );
+      setMediaError(null);
       
-      if (firstPlayableFile) {
-        const initialMediaUrl = `https://archive.org/download/${id}/${encodeURIComponent(firstPlayableFile.name)}`;
-        setActiveMedia(initialMediaUrl);
-        setActiveMediaTitle(firstPlayableFile.name);
+      try {
+        // Find the first video or audio file and set it as the active media
+        const firstPlayableFile = episodeFiles.find(file => 
+          file.format?.toLowerCase().includes("video") || file.format?.toLowerCase().includes("audio")
+        );
+        
+        if (firstPlayableFile) {
+          const initialMediaUrl = `https://archive.org/download/${id}/${encodeURIComponent(firstPlayableFile.name)}`;
+          setActiveMedia(initialMediaUrl);
+          setActiveMediaTitle(firstPlayableFile.name);
+          
+          console.log("Setting initial media:", {
+            url: initialMediaUrl,
+            title: firstPlayableFile.name,
+            format: firstPlayableFile.format
+          });
+        } else {
+          setMediaError("No playable media files found for this item.");
+        }
+      } catch (err) {
+        console.error("Error setting initial media:", err);
+        setMediaError("Error preparing media files for playback.");
       }
     }
   }, [itemDetails, id, episodeFiles]);
@@ -152,6 +178,16 @@ const PlayerPage = () => {
     });
   };
   
+  // Handle media errors
+  const handleMediaError = (error: string) => {
+    setMediaError(error);
+    toast({
+      title: "Media Playback Error",
+      description: error,
+      variant: "destructive"
+    });
+  };
+  
   // Check if files appear to be episodes based on filenames
   const hasEpisodes = episodeFiles.length > 0;
   
@@ -175,7 +211,10 @@ const PlayerPage = () => {
         <div className="text-center py-8">
           <h2 className="text-2xl font-semibold mb-4">Error</h2>
           <p className="text-gray-500">Failed to load content.</p>
-          <Button onClick={() => navigate('/')} className="mt-4">Go Home</Button>
+          <div className="flex justify-center gap-4 mt-6">
+            <Button onClick={() => refetch()} variant="outline">Try Again</Button>
+            <Button onClick={() => navigate('/')} variant="default">Go Home</Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-8">
@@ -185,7 +224,33 @@ const PlayerPage = () => {
             <div className="w-full lg:w-2/3 flex flex-col">
               {/* Media Player */}
               <div className="bg-black/10 dark:bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden mb-4">
-                {mediaType === "video" || mediaType === "movies" ? (
+                {mediaError ? (
+                  <div className="aspect-video flex items-center justify-center bg-black/80 p-6">
+                    <div className="text-center max-w-md">
+                      <Alert variant="destructive" className="mb-4">
+                        <AlertTitle>Media Error</AlertTitle>
+                        <AlertDescription>{mediaError}</AlertDescription>
+                      </Alert>
+                      <p className="text-sm text-gray-400 mb-4">
+                        This may be due to browser restrictions, CORS policies, or the media format.
+                        Try accessing the content directly on Archive.org.
+                      </p>
+                      <Button 
+                        variant="default" 
+                        asChild
+                      >
+                        <a 
+                          href={`https://archive.org/details/${id}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          View on Archive.org
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ) : mediaType === "video" || mediaType === "movies" ? (
                   <MoviePlayer
                     src={activeMedia}
                     title={activeMediaTitle}

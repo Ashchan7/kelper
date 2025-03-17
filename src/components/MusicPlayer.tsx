@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, RepeatIcon, Shuffle, Music } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, RepeatIcon, Shuffle, FileMusic } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 
 interface Track {
   id: string;
@@ -30,9 +31,14 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
   const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none');
   const [isExpanded, setIsExpanded] = useState(false);
   
+  // Add states for error handling
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const audioRef = useRef<HTMLAudioElement>(null);
   const playlistRef = useRef<HTMLDivElement>(null);
   
+  const { toast } = useToast();
   const currentTrack = tracks[currentTrackIndex];
   
   // Format time (e.g., 125 seconds -> "2:05")
@@ -70,6 +76,8 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     if (!audio) return;
     
     setDuration(audio.duration);
+    setIsLoading(false);
+    setLoadError(null);
     
     // If there's a predefined duration in the track data, use that
     if (currentTrack?.duration) {
@@ -233,19 +241,61 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     }, 0);
   };
   
-  // Update audio properties when track changes
-  useEffect(() => {
+  // Add error handling for audio loading
+  const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
+    const audio = e.currentTarget;
+    console.error("Audio loading error:", audio.error);
+    setLoadError("Failed to load audio. Please try again later.");
+    setIsPlaying(false);
+    toast({
+      title: "Audio Error",
+      description: "Could not load the audio file. Please try another track.",
+      variant: "destructive",
+    });
+  };
+  
+  // Add a function to retry loading
+  const retryLoading = () => {
     const audio = audioRef.current;
     if (!audio) return;
+    
+    setLoadError(null);
+    setIsLoading(true);
+    audio.load();
+  };
+  
+  // Update autoplay handling
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
     
     // Set volume based on current volume state
     audio.volume = isMuted ? 0 : volume / 100;
     
-    // If was playing, start playing the new track
+    // Reset error and loading states
+    setLoadError(null);
+    setIsLoading(true);
+    
+    // If was playing, attempt to start playing the new track
     if (isPlaying) {
-      audio.play().catch(err => console.error("Error playing audio:", err));
+      // Using a small timeout to ensure the audio has a chance to start loading
+      setTimeout(() => {
+        audio.play().catch(err => {
+          console.error("Error playing audio after track change:", err);
+          setIsPlaying(false);
+          
+          // Check if it's an autoplay policy error
+          if (err.name === "NotAllowedError") {
+            toast({
+              title: "Autoplay Blocked",
+              description: "Your browser blocked autoplay. Click play to start manually.",
+              duration: 5000,
+            });
+          }
+        });
+      }, 100);
     }
-  }, [currentTrackIndex]);
+  }, [currentTrackIndex, currentTrack]);
   
   return (
     <div className="w-full">
@@ -255,6 +305,9 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleMetadataLoaded}
         onEnded={handleTrackEnd}
+        onError={handleAudioError}
+        crossOrigin="anonymous"
+        preload="metadata"
       />
       
       <motion.div 
@@ -262,197 +315,171 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
         layout
         transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 25 }}
       >
-        {/* Compact Player */}
-        <div className="p-4">
-          <div className="flex items-center gap-4">
-            {/* Album Art */}
-            <div className="w-16 h-16 rounded-lg overflow-hidden bg-black/20 flex-shrink-0">
-              {currentTrack.coverArt ? (
-                <img 
-                  src={currentTrack.coverArt} 
-                  alt={currentTrack.title} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 text-white/30">
-                  <Music className="w-8 h-8" />
-                </div>
-              )}
+        {loadError ? (
+          <div className="p-4 text-center">
+            <div className="py-8">
+              <div className="mb-4 text-red-500">
+                <span className="block text-lg font-medium mb-2">Audio Playback Error</span>
+                <p className="text-sm text-gray-400">{loadError}</p>
+              </div>
+              <Button onClick={retryLoading}>Retry</Button>
             </div>
-            
-            {/* Track Info */}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-medium truncate">{currentTrack.title}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                {currentTrack.artist || "Unknown Artist"}
-              </p>
+          </div>
+        ) : (
+          <div className="p-4">
+            <div className="flex items-center gap-4">
+              {/* Album Art */}
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-black/20 flex-shrink-0">
+                {currentTrack.coverArt ? (
+                  <img 
+                    src={currentTrack.coverArt} 
+                    alt={currentTrack.title} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 text-white/30">
+                    <FileMusic className="w-8 h-8" />
+                  </div>
+                )}
+              </div>
               
-              {/* Progress Slider (Mobile) */}
-              <div className="mt-2 md:hidden">
-                <Slider 
-                  value={[Math.round((currentTime / duration) * 100) || 0]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={handleSeek}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>{formatTime(currentTime)}</span>
-                  <span>{formatTime(duration)}</span>
+              {/* Track Info */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium truncate">{currentTrack.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  {currentTrack.artist || "Unknown Artist"}
+                </p>
+                
+                {/* Progress Slider (Mobile) */}
+                <div className="mt-2 md:hidden">
+                  <Slider 
+                    value={[Math.round((currentTime / duration) * 100) || 0]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={handleSeek}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(duration)}</span>
+                  </div>
                 </div>
               </div>
+              
+              {/* Main Controls */}
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="rounded-full text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-white/10"
+                  onClick={handlePrevious}
+                >
+                  <SkipBack className="w-5 h-5" />
+                </Button>
+                
+                <Button 
+                  variant="default" 
+                  size="icon"
+                  className="rounded-full w-10 h-10 bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-transform"
+                  onClick={togglePlay}
+                >
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5" />
+                  ) : (
+                    <Play className="w-5 h-5" />
+                  )}
+                </Button>
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="rounded-full text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-white/10"
+                  onClick={handleNext}
+                >
+                  <SkipForward className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              {/* Expand/Collapse Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="md:hidden"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                {isExpanded ? "Less" : "More"}
+              </Button>
             </div>
             
-            {/* Main Controls */}
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="rounded-full text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-white/10"
-                onClick={handlePrevious}
-              >
-                <SkipBack className="w-5 h-5" />
-              </Button>
-              
-              <Button 
-                variant="default" 
-                size="icon"
-                className="rounded-full w-10 h-10 bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-transform"
-                onClick={togglePlay}
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <Play className="w-5 h-5" />
-                )}
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="rounded-full text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-white/10"
-                onClick={handleNext}
-              >
-                <SkipForward className="w-5 h-5" />
-              </Button>
-            </div>
-            
-            {/* Expand/Collapse Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              {isExpanded ? "Less" : "More"}
-            </Button>
-          </div>
-          
-          {/* Desktop Progress Bar */}
-          <div className="hidden md:block mt-4">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-            <Slider 
-              value={[Math.round((currentTime / duration) * 100) || 0]}
-              min={0}
-              max={100}
-              step={1}
-              onValueChange={handleSeek}
-              className="w-full"
-            />
-          </div>
-          
-          {/* Additional Controls - Show on mobile when expanded, always on desktop */}
-          <motion.div 
-            className={`mt-4 gap-2 ${isExpanded || 'md:flex hidden'}`}
-            initial={false}
-            animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
-            style={{ display: isExpanded ? 'flex' : 'none' }}
-          >
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className={`rounded-full ${
-                isShuffled ? "bg-black/10 dark:bg-white/10 text-black dark:text-white" : ""
-              }`}
-              onClick={toggleShuffle}
-            >
-              <Shuffle className="w-4 h-4" />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className={`rounded-full ${
-                repeatMode !== 'none' ? "bg-black/10 dark:bg-white/10 text-black dark:text-white" : ""
-              }`}
-              onClick={toggleRepeatMode}
-            >
-              <RepeatIcon className="w-4 h-4" />
-              {repeatMode === 'one' && <span className="absolute text-[8px] font-bold">1</span>}
-            </Button>
-            
-            <div className="flex items-center gap-2 ml-auto">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="rounded-full"
-                onClick={toggleMute}
-              >
-                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </Button>
-              
-              <Slider
-                value={[isMuted ? 0 : volume]}
+            {/* Desktop Progress Bar */}
+            <div className="hidden md:block mt-4">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+              <Slider 
+                value={[Math.round((currentTime / duration) * 100) || 0]}
                 min={0}
                 max={100}
                 step={1}
-                onValueChange={handleVolumeChange}
-                className="w-20"
+                onValueChange={handleSeek}
+                className="w-full"
               />
             </div>
-          </motion.div>
-        </div>
-        
-        {/* Playlist (only expanded on mobile, always shown on desktop) */}
-        <motion.div 
-          ref={playlistRef}
-          className={`bg-black/5 dark:bg-white/5 ${isExpanded || 'md:block hidden'}`}
-          initial={false}
-          animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
-          style={{ display: isExpanded ? 'block' : 'none' }}
-        >
-          <div className="p-4 border-t border-white/10 dark:border-white/5">
-            <h4 className="font-medium mb-3">Playlist</h4>
-            <div className="max-h-48 overflow-y-auto space-y-1 pr-2">
-              {tracks.map((track, index) => (
-                <button
-                  key={track.id}
-                  onClick={() => selectTrack(index)}
-                  className={`w-full text-left p-2 rounded-lg hover:bg-white/10 dark:hover:bg-black/20 transition-colors ${
-                    index === currentTrackIndex ? "bg-white/10 dark:bg-black/20" : ""
-                  }`}
+            
+            {/* Additional Controls - Show on mobile when expanded, always on desktop */}
+            <motion.div 
+              className={`mt-4 gap-2 ${isExpanded || 'md:flex hidden'}`}
+              initial={false}
+              animate={{ height: isExpanded ? 'auto' : 0, opacity: isExpanded ? 1 : 0 }}
+              style={{ display: isExpanded ? 'flex' : 'none' }}
+            >
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className={`rounded-full ${
+                  isShuffled ? "bg-black/10 dark:bg-white/10 text-black dark:text-white" : ""
+                }`}
+                onClick={toggleShuffle}
+              >
+                <Shuffle className="w-4 h-4" />
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className={`rounded-full ${
+                  repeatMode !== 'none' ? "bg-black/10 dark:bg-white/10 text-black dark:text-white" : ""
+                }`}
+                onClick={toggleRepeatMode}
+              >
+                <RepeatIcon className="w-4 h-4" />
+                {repeatMode === 'one' && <span className="absolute text-[8px] font-bold">1</span>}
+              </Button>
+              
+              <div className="flex items-center gap-2 ml-auto">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="rounded-full"
+                  onClick={toggleMute}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 text-sm text-gray-500">{index + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{track.title}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {track.artist || "Unknown Artist"}
-                      </p>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {track.duration ? formatTime(track.duration) : "--:--"}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </Button>
+                
+                <Slider
+                  value={[isMuted ? 0 : volume]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={handleVolumeChange}
+                  className="w-20"
+                />
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
+        )}
       </motion.div>
     </div>
   );

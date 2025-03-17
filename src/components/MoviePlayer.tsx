@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Settings } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -31,6 +30,9 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Add a state to track loading errors
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Control visibility timer
   useEffect(() => {
@@ -144,12 +146,34 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     setCurrentTime(newTime);
   };
   
-  // Handle metadata loaded
+  // Add error handling for video loading
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const video = e.currentTarget;
+    console.error("Video loading error:", video.error);
+    setLoadError("Failed to load video. Please try again later.");
+    toast({
+      title: "Video Error",
+      description: "Could not load the video file. Please try again or check another video.",
+      variant: "destructive",
+    });
+  };
+  
+  // Modify metadata loaded handler to clear any previous errors
   const handleMetadataLoaded = () => {
     const video = videoRef.current;
     if (!video) return;
     
     setDuration(video.duration);
+    setLoadError(null);
+  };
+  
+  // Add a function to retry loading the video
+  const retryLoading = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    setLoadError(null);
+    video.load();
   };
   
   // Skip forward/backward
@@ -237,6 +261,16 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
       onMouseMove={() => setShowControls(true)}
       onClick={handleTap}
     >
+      {loadError ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white">
+          <div className="text-center p-4">
+            <h3 className="text-xl font-medium mb-2">Video Playback Error</h3>
+            <p className="mb-4 text-gray-400">{loadError}</p>
+            <Button onClick={retryLoading}>Retry</Button>
+          </div>
+        </div>
+      ) : null}
+      
       <video
         ref={videoRef}
         src={src}
@@ -248,7 +282,10 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
         }}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleMetadataLoaded}
+        onError={handleVideoError}
         onEnded={() => setIsPlaying(false)}
+        crossOrigin="anonymous"
+        preload="metadata"
       />
       
       {/* Overlay for title */}

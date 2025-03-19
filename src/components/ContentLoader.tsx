@@ -6,18 +6,20 @@ interface ContentLoaderProps {
   visible?: boolean;
   className?: string;
   text?: string;
+  autoHide?: boolean;
 }
 
 const ContentLoader = ({ 
   visible = true, 
   className = "py-12", 
-  text 
+  text,
+  autoHide = true
 }: ContentLoaderProps) => {
   if (!visible) return null;
 
   return (
     <div className={`w-full flex flex-col items-center justify-center ${className}`}>
-      <Loader />
+      <Loader autoHide={autoHide} />
       {text && (
         <p className="mt-4 text-sm text-muted-foreground">{text}</p>
       )}

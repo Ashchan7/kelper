@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 
 interface PageLoaderProps {
   visible?: boolean;
+  autoHide?: boolean;
 }
 
-const PageLoader = ({ visible = true }: PageLoaderProps) => {
+const PageLoader = ({ visible = true, autoHide = true }: PageLoaderProps) => {
   if (!visible) return null;
 
   return (
@@ -18,7 +19,7 @@ const PageLoader = ({ visible = true }: PageLoaderProps) => {
       transition={{ duration: 0.3 }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm"
     >
-      <Loader size="large" />
+      <Loader size="large" autoHide={autoHide} />
     </motion.div>
   );
 };

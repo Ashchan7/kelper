@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface LoaderProps {
@@ -7,14 +7,18 @@ interface LoaderProps {
   size?: "small" | "default" | "large";
   color?: "default" | "white" | "primary";
   visible?: boolean;
+  autoHide?: boolean;
 }
 
 const Loader = ({ 
   className, 
   size = "default", 
   color = "default",
-  visible = true 
+  visible = true,
+  autoHide = false
 }: LoaderProps) => {
+  const [isVisible, setIsVisible] = useState(visible);
+  
   // Size mapping
   const sizeMap = {
     small: "24px",
@@ -32,8 +36,68 @@ const Loader = ({
   // Calculate actual size
   const actualSize = sizeMap[size];
   const actualColor = colorMap[color];
-
-  if (!visible) return null;
+  
+  // Auto-hide logic - check if any audio/video elements are playing
+  useEffect(() => {
+    if (!autoHide || !visible) return;
+    
+    const checkMediaPlaying = () => {
+      const audioElements = document.querySelectorAll('audio');
+      const videoElements = document.querySelectorAll('video');
+      
+      // Check if any audio is playing
+      const isAudioPlaying = Array.from(audioElements).some(
+        audio => !audio.paused && !audio.ended && audio.readyState > 2
+      );
+      
+      // Check if any video is playing
+      const isVideoPlaying = Array.from(videoElements).some(
+        video => !video.paused && !video.ended && video.readyState > 2
+      );
+      
+      // Hide loader if media is playing
+      if (isAudioPlaying || isVideoPlaying) {
+        setIsVisible(false);
+      }
+    };
+    
+    // Initial check
+    checkMediaPlaying();
+    
+    // Set up event listeners for media elements
+    const handlePlaying = () => {
+      setIsVisible(false);
+    };
+    
+    const handleWaiting = () => {
+      setIsVisible(true);
+    };
+    
+    const mediaElements = [...document.querySelectorAll('audio'), ...document.querySelectorAll('video')];
+    
+    mediaElements.forEach(element => {
+      element.addEventListener('playing', handlePlaying);
+      element.addEventListener('waiting', handleWaiting);
+      element.addEventListener('canplay', handlePlaying);
+    });
+    
+    // Check every second as a fallback
+    const interval = setInterval(checkMediaPlaying, 1000);
+    
+    return () => {
+      clearInterval(interval);
+      mediaElements.forEach(element => {
+        element.removeEventListener('playing', handlePlaying);
+        element.removeEventListener('waiting', handleWaiting);
+        element.removeEventListener('canplay', handlePlaying);
+      });
+    };
+  }, [autoHide, visible]);
+  
+  // Respect both the passed visible prop and internal state
+  const shouldDisplay = visible && isVisible;
+  
+  if (!shouldDisplay) return null;
 
   return (
     <div 

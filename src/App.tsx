@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import SignupPage from "./pages/SignupPage";
 import SearchPage from "./pages/SearchPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import DMCAPage from "./pages/DMCAPage";
 
 // Components & Layout
 import Layout from "./components/Layout";
@@ -73,6 +75,10 @@ const router = createBrowserRouter([
       {
         path: "/privacy",
         element: <PrivacyPage />,
+      },
+      {
+        path: "/dmca",
+        element: <DMCAPage />,
       },
       {
         path: "*",

@@ -89,12 +89,15 @@ const Footer = () => {
           <p className="text-xs text-muted-foreground">
             &copy; {year} Kelper. All rights reserved.
           </p>
-          <div className="flex items-center mt-4 md:mt-0">
+          <div className="flex items-center flex-wrap justify-center mt-4 md:mt-0">
             <Button variant="link" className="text-xs text-muted-foreground px-2" asChild>
               <Link to="/privacy">Privacy Policy</Link>
             </Button>
             <Button variant="link" className="text-xs text-muted-foreground px-2" asChild>
               <Link to="/terms">Terms of Service</Link>
+            </Button>
+            <Button variant="link" className="text-xs text-muted-foreground px-2" asChild>
+              <Link to="/dmca">DMCA Policy</Link>
             </Button>
           </div>
           <div className="flex items-center text-xs text-muted-foreground mt-4 md:mt-0">

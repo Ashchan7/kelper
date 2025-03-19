@@ -64,14 +64,15 @@ const PlayerPage = () => {
     }
   }, [itemDetails]);
   
-  // Function to get related items from collection
+  // Function to get related items from collection - FIXED to remove license filtering
   const getRelatedItemsFromCollection = async (itemId: string) => {
     if (!itemDetails?.collection || itemDetails.collection.length === 0) {
       return [];
     }
     
     const collection = itemDetails.collection[0];
-    const url = `https://archive.org/advancedsearch.php?q=collection:${encodeURIComponent(collection)} AND (licenseurl:(*publicdomain* OR *creativecommons.org/licenses/by/*) OR rights:(*publicdomain* OR *CC-BY*) OR license:(*publicdomain* OR *CC-BY*)) AND -licenseurl:(*nc* OR *noncommercial* OR *non-commercial*) AND -rights:(*nc* OR *noncommercial* OR *non-commercial*) AND -license:(*nc* OR *noncommercial* OR *non-commercial*) AND -licenseurl:*nd* AND -rights:*nd* AND -license:*nd*&output=json&rows=10&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license&sort[]=downloads desc`;
+    // Updated query to remove license filtering and just fetch items from the same collection
+    const url = `https://archive.org/advancedsearch.php?q=collection:${encodeURIComponent(collection)}&output=json&rows=10&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license&sort[]=downloads desc`;
     
     const response = await fetch(url);
     if (!response.ok) {
@@ -80,49 +81,16 @@ const PlayerPage = () => {
     
     const data = await response.json();
     
-    // Filter for monetizable content and remove the current item
+    // Only filter out the current item, but don't restrict by license
     return data.response.docs
-      .filter((item: any) => item.identifier !== itemId)
-      .filter((item: any) => {
-        // Check if license is monetizable
-        const licenseUrl = item.licenseurl;
-        const rights = item.rights;
-        const license = item.license;
-        
-        // Check for monetizable licenses
-        const containsMonetizable = [
-          'publicdomain',
-          'creativecommons.org/publicdomain/zero',
-          'creativecommons.org/licenses/by/',
-          'cc-by',
-          'cc0'
-        ].some(term => {
-          const licenseInfo = [licenseUrl, rights, license].filter(Boolean).join(' ').toLowerCase();
-          return licenseInfo.includes(term);
-        });
-        
-        // Check for non-monetizable terms
-        const containsNonMonetizable = [
-          'nc',
-          'non-commercial',
-          'noncommercial',
-          'all rights reserved',
-          'nd',
-          'no derivative'
-        ].some(term => {
-          const licenseInfo = [licenseUrl, rights, license].filter(Boolean).join(' ').toLowerCase();
-          return licenseInfo.includes(term);
-        });
-        
-        return containsMonetizable && !containsNonMonetizable;
-      });
+      .filter((item: any) => item.identifier !== itemId);
   };
   
-  // Fetch related items
+  // Fetch related items - ensure we still fetch even if licenseError exists
   const { data: relatedItems, isLoading: isRelatedLoading } = useQuery({
     queryKey: ["relatedItems", id],
     queryFn: () => getRelatedItemsFromCollection(id!),
-    enabled: !!id && !!itemDetails?.collection?.[0] && !licenseError,
+    enabled: !!id && !!itemDetails?.collection?.[0],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
   

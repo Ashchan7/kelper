@@ -47,15 +47,17 @@ const Loader = ({
       
       // Check if any audio is playing
       const isAudioPlaying = Array.from(audioElements).some(
-        audio => !audio.paused && !audio.ended && audio.readyState > 2
+        audio => (!audio.paused && !audio.ended && audio.currentTime > 0) || 
+                 (audio.readyState >= 3 && !audio.error)
       );
       
       // Check if any video is playing
       const isVideoPlaying = Array.from(videoElements).some(
-        video => !video.paused && !video.ended && video.readyState > 2
+        video => (!video.paused && !video.ended && video.currentTime > 0) || 
+                 (video.readyState >= 3 && !video.error)
       );
       
-      // Hide loader if media is playing
+      // Hide loader if media is playing or ready to play
       if (isAudioPlaying || isVideoPlaying) {
         setIsVisible(false);
       }
@@ -69,27 +71,40 @@ const Loader = ({
       setIsVisible(false);
     };
     
+    const handleCanPlay = () => {
+      setIsVisible(false);
+    };
+    
     const handleWaiting = () => {
-      setIsVisible(true);
+      // Only show loader again if media is actually buffering/waiting
+      // and not just paused by user
+      const mediaElement = event.target as HTMLMediaElement;
+      if (!mediaElement.paused || mediaElement.seeking) {
+        setIsVisible(true);
+      }
     };
     
     const mediaElements = [...document.querySelectorAll('audio'), ...document.querySelectorAll('video')];
     
     mediaElements.forEach(element => {
       element.addEventListener('playing', handlePlaying);
+      element.addEventListener('canplay', handleCanPlay);
+      element.addEventListener('canplaythrough', handleCanPlay);
       element.addEventListener('waiting', handleWaiting);
-      element.addEventListener('canplay', handlePlaying);
+      element.addEventListener('loadeddata', handleCanPlay);
     });
     
-    // Check every second as a fallback
-    const interval = setInterval(checkMediaPlaying, 1000);
+    // Check every 500ms as a fallback
+    const interval = setInterval(checkMediaPlaying, 500);
     
     return () => {
       clearInterval(interval);
       mediaElements.forEach(element => {
         element.removeEventListener('playing', handlePlaying);
+        element.removeEventListener('canplay', handleCanPlay);
+        element.removeEventListener('canplaythrough', handleCanPlay);
         element.removeEventListener('waiting', handleWaiting);
-        element.removeEventListener('canplay', handlePlaying);
+        element.removeEventListener('loadeddata', handleCanPlay);
       });
     };
   }, [autoHide, visible]);

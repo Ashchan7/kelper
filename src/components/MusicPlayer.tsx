@@ -10,6 +10,7 @@ interface Track {
   id: string;
   title: string;
   artist?: string;
+  album?: string;
   duration?: number;
   src: string;
   coverArt?: string;
@@ -172,6 +173,10 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     if (currentTrack?.duration) {
       setDuration(currentTrack.duration);
     }
+    
+    // Dispatch a custom event to notify other components that media is ready
+    const readyEvent = new CustomEvent('mediaready', { bubbles: true });
+    audio.dispatchEvent(readyEvent);
     
     // If we were previously showing an error but fallback succeeded
     if (loadError) {
@@ -377,6 +382,10 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     const audio = e.currentTarget;
     console.error("Audio loading error:", audio.error);
     
+    // Dispatch a custom event to notify loaders about the error
+    const errorEvent = new CustomEvent('mediaerror', { bubbles: true });
+    audio.dispatchEvent(errorEvent);
+    
     // If we're already trying fallbacks
     if (attemptingFallback) {
       tryNextSource();
@@ -459,6 +468,27 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     }
   }, [currentTrackIndex, currentTrack]);
   
+  // Add an effect to handle successful playback start
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    const handlePlaybackStarted = () => {
+      // This helps ensure the loader is definitely hidden when playback starts
+      const playEvent = new CustomEvent('mediaplaybackstarted', { bubbles: true });
+      audio.dispatchEvent(playEvent);
+      
+      // Also set our own loading state to false
+      setIsLoading(false);
+    };
+    
+    audio.addEventListener('playing', handlePlaybackStarted);
+    
+    return () => {
+      audio.removeEventListener('playing', handlePlaybackStarted);
+    };
+  }, []);
+
   return (
     <div className="w-full">
       {/* Enhanced audio element with fallback support */}

@@ -14,6 +14,7 @@ interface MediaFile {
   length?: string;
   height?: string;
   width?: string;
+  source?: string; // Added source property to fix TypeScript error
 }
 
 interface EpisodeSelectorProps {

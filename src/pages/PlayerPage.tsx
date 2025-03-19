@@ -21,6 +21,7 @@ import ContentGrid from "@/components/ContentGrid";
 import EpisodeSelector from "@/components/EpisodeSelector";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ContentLoader from "@/components/ContentLoader";
 
 const PlayerPage = () => {
   const { mediaType, id } = useParams();
@@ -241,22 +242,13 @@ const PlayerPage = () => {
   const hasEpisodes = episodeFiles.length > 0;
   
   return (
-    
     <div className="pt-20 pb-28 md:pb-20 px-4 md:px-8 max-w-7xl mx-auto">
       {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-2/3" />
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="w-full lg:w-2/3">
-              <Skeleton className="h-64 w-full rounded-xl" />
-              <Skeleton className="h-8 w-1/2 mt-4" />
-            </div>
-            <div className="w-full lg:w-1/3">
-              <Skeleton className="h-48 w-full rounded-xl" />
-            </div>
-          </div>
-          <Skeleton className="h-48 w-full rounded-xl" />
-        </div>
+        <ContentLoader 
+          visible={true}
+          className="py-24" 
+          text="Loading content..."
+        />
       ) : error ? (
         <div className="text-center py-8">
           <h2 className="text-2xl font-semibold mb-4">Error</h2>

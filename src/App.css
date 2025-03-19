@@ -121,6 +121,16 @@ form[class*="search"] button,
   box-shadow: none !important;
 }
 
+/* Loading animation keyframes */
+@keyframes travel {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -100; }
+}
+
+.animate-travel {
+  animation: travel 1.4s linear infinite;
+}
+
 /* Additional mobile optimizations */
 @media (max-width: 640px) {
   html {

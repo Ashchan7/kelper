@@ -8,8 +8,9 @@ import { Music } from "lucide-react";
 
 const MusicPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const featuredMusic = useFeaturedContent("audio", 16, true); // Set monetizableOnly to true
-  const searchResults = useArchiveSearch(searchQuery, "audio", 1, 20, true); // Set monetizableOnly to true
+  // Set monetizableOnly to true and allow extended search if results are empty
+  const featuredMusic = useFeaturedContent("audio", 16, true);
+  const searchResults = useArchiveSearch(searchQuery, "audio", 1, 20, true, true);
   
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -40,8 +41,8 @@ const MusicPage = () => {
           isLoading={searchResults.isLoading}
           title={`Search Results for "${searchQuery}"`}
           description={searchResults.data?.totalResults 
-            ? `Found ${searchResults.data.totalResults} results` 
-            : undefined}
+            ? `Found ${searchResults.data.totalResults} legally shareable results` 
+            : "Only displaying content with appropriate licensing for legal reuse"}
         />
       ) : (
         <ContentGrid 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
@@ -7,6 +8,7 @@ import {
   ExternalLink,
   Share2,
   Heart,
+  AlertTriangle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -32,6 +34,7 @@ const PlayerPage = () => {
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoritesContext();
   const [isFavoriteState, setIsFavoriteState] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
   
   // Fetch item details with proper error handling for current React Query version
   const { data: itemDetails, isLoading, error, refetch } = useQuery({
@@ -54,6 +57,19 @@ const PlayerPage = () => {
     }
   }, [error, toast]);
   
+  // Check if content is legally monetizable
+  useEffect(() => {
+    if (itemDetails) {
+      if (!itemDetails.isLegallyMonetizable) {
+        console.warn("Non-monetizable content detected:", itemDetails.identifier);
+        setLicenseError("This content cannot be displayed due to licensing restrictions. Only content with Public Domain (CC0) or Creative Commons Attribution (CC-BY) licenses can be shown.");
+        setActiveMedia("");
+      } else {
+        setLicenseError(null);
+      }
+    }
+  }, [itemDetails]);
+  
   // Function to get related items from collection
   const getRelatedItemsFromCollection = async (itemId: string) => {
     if (!itemDetails?.collection || itemDetails.collection.length === 0) {
@@ -61,7 +77,7 @@ const PlayerPage = () => {
     }
     
     const collection = itemDetails.collection[0];
-    const url = `https://archive.org/advancedsearch.php?q=collection:${encodeURIComponent(collection)}&output=json&rows=10&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=downloads desc`;
+    const url = `https://archive.org/advancedsearch.php?q=collection:${encodeURIComponent(collection)} AND (licenseurl:(*publicdomain* OR *creativecommons.org/licenses/by/*) OR rights:(*publicdomain* OR *CC-BY*) OR license:(*publicdomain* OR *CC-BY*)) AND -licenseurl:(*nc* OR *noncommercial* OR *non-commercial*) AND -rights:(*nc* OR *noncommercial* OR *non-commercial*) AND -license:(*nc* OR *noncommercial* OR *non-commercial*) AND -licenseurl:*nd* AND -rights:*nd* AND -license:*nd*&output=json&rows=10&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license&sort[]=downloads desc`;
     
     const response = await fetch(url);
     if (!response.ok) {
@@ -69,15 +85,50 @@ const PlayerPage = () => {
     }
     
     const data = await response.json();
-    // Filter out the current item
-    return data.response.docs.filter((item: any) => item.identifier !== itemId);
+    
+    // Filter for monetizable content and remove the current item
+    return data.response.docs
+      .filter((item: any) => item.identifier !== itemId)
+      .filter((item: any) => {
+        // Check if license is monetizable
+        const licenseUrl = item.licenseurl;
+        const rights = item.rights;
+        const license = item.license;
+        
+        // Check for monetizable licenses
+        const containsMonetizable = [
+          'publicdomain',
+          'creativecommons.org/publicdomain/zero',
+          'creativecommons.org/licenses/by/',
+          'cc-by',
+          'cc0'
+        ].some(term => {
+          const licenseInfo = [licenseUrl, rights, license].filter(Boolean).join(' ').toLowerCase();
+          return licenseInfo.includes(term);
+        });
+        
+        // Check for non-monetizable terms
+        const containsNonMonetizable = [
+          'nc',
+          'non-commercial',
+          'noncommercial',
+          'all rights reserved',
+          'nd',
+          'no derivative'
+        ].some(term => {
+          const licenseInfo = [licenseUrl, rights, license].filter(Boolean).join(' ').toLowerCase();
+          return licenseInfo.includes(term);
+        });
+        
+        return containsMonetizable && !containsNonMonetizable;
+      });
   };
   
   // Fetch related items
   const { data: relatedItems, isLoading: isRelatedLoading } = useQuery({
     queryKey: ["relatedItems", id],
     queryFn: () => getRelatedItemsFromCollection(id!),
-    enabled: !!id && !!itemDetails?.collection?.[0],
+    enabled: !!id && !!itemDetails?.collection?.[0] && !licenseError,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
@@ -86,7 +137,7 @@ const PlayerPage = () => {
   
   // Improved handling of setting the initial media file
   useEffect(() => {
-    if (itemDetails && episodeFiles.length > 0 && !activeMedia) {
+    if (itemDetails && episodeFiles.length > 0 && !activeMedia && !licenseError) {
       setMediaError(null);
       console.log("Total files available:", episodeFiles.length);
       
@@ -126,7 +177,7 @@ const PlayerPage = () => {
         setMediaError("Error preparing media files for playback.");
       }
     }
-  }, [itemDetails, id, episodeFiles, activeMedia]);
+  }, [itemDetails, id, episodeFiles, activeMedia, licenseError]);
   
   // Check if item is in favorites
   useEffect(() => {
@@ -198,7 +249,7 @@ const PlayerPage = () => {
     });
   };
   
-  // Improved episode selection with better error handling - THIS IS THE CRITICAL FIX
+  // Improved episode selection with better error handling
   const handleEpisodeSelect = (episodeUrl: string, episodeName: string, file?: any) => {
     try {
       console.log("Selected episode:", episodeName);
@@ -258,6 +309,35 @@ const PlayerPage = () => {
             <Button onClick={() => navigate('/')} variant="default">Go Home</Button>
           </div>
         </div>
+      ) : licenseError ? (
+        <div className="text-center py-8">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold mb-4">Content Unavailable</h2>
+          <Alert variant="destructive" className="max-w-2xl mx-auto mb-4">
+            <AlertTitle>Licensing Restriction</AlertTitle>
+            <AlertDescription>{licenseError}</AlertDescription>
+          </Alert>
+          <p className="text-gray-500 max-w-2xl mx-auto mb-6">
+            For legal compliance and monetization purposes, we can only display content with appropriate licensing. 
+            You can still access this content directly on the Internet Archive website.
+          </p>
+          <div className="flex justify-center gap-4 mt-6">
+            <Button onClick={() => navigate('/')} variant="outline">Go Home</Button>
+            <Button 
+              variant="default" 
+              asChild
+            >
+              <a 
+                href={`https://archive.org/details/${id}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View on Archive.org
+              </a>
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-8">
           {/* Hero section with info */}
@@ -313,6 +393,20 @@ const PlayerPage = () => {
                   />
                 )}
               </div>
+              
+              {/* License info */}
+              {itemDetails?.isLegallyMonetizable && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3 mb-4 text-sm">
+                  <p className="text-green-700 dark:text-green-300">
+                    Licensed content: {
+                      itemDetails.license || 
+                      itemDetails.licenseurl || 
+                      itemDetails.rights || 
+                      "Public Domain / Creative Commons"
+                    }
+                  </p>
+                </div>
+              )}
               
               {/* Title and controls */}
               <div className="bg-black/10 dark:bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 
 export interface ArchiveItem {
@@ -13,6 +14,9 @@ export interface ArchiveItem {
   downloads?: number;
   year?: string;
   publicdate: string;
+  licenseurl?: string;
+  rights?: string;
+  license?: string;
 }
 
 export interface SearchResponse {
@@ -23,12 +27,68 @@ export interface SearchResponse {
 
 export type MediaType = "movies" | "audio" | "all";
 
-// Keep existing hooks and functions the same
+// Define license types
+export const LicenseType = {
+  MONETIZABLE: 'monetizable',
+  NON_MONETIZABLE: 'non-monetizable',
+  UNKNOWN: 'unknown'
+};
+
+// Helper to check if a license is monetizable
+const isMonetizableLicense = (licenseUrl?: string, rights?: string, license?: string): boolean => {
+  // Return false if all license data is missing
+  if (!licenseUrl && !rights && !license) return false;
+  
+  // Check for non-monetizable licenses
+  const nonMonetizablePhrases = [
+    'all rights reserved',
+    'nc', 
+    'non-commercial',
+    'noncommercial',
+    'no commercial',
+    'no derivative',
+    'nd',
+    'sampling'
+  ];
+  
+  // Arrays of license URLs and identifiers that are monetizable
+  const monetizableLicenses = [
+    'creativecommons.org/publicdomain/zero',  // CC0
+    'creativecommons.org/licenses/by/',       // CC-BY
+    'publicdomain',
+    'cc-by',
+    'cc0'
+  ];
+  
+  // Combine all license information to a lowercase string for easier checking
+  const licenseInfo = [
+    licenseUrl, 
+    rights, 
+    license
+  ].filter(Boolean).join(' ').toLowerCase();
+  
+  // First check for non-monetizable terms
+  for (const phrase of nonMonetizablePhrases) {
+    if (licenseInfo.includes(phrase)) return false;
+  }
+  
+  // Then check for explicitly monetizable licenses
+  for (const phrase of monetizableLicenses) {
+    if (licenseInfo.includes(phrase)) return true;
+  }
+  
+  // If it passed the non-monetizable check but didn't match any monetizable pattern,
+  // we should be cautious and assume it's not monetizable
+  return false;
+};
+
+// Extend the search query to include license filter
 export const useArchiveSearch = (
   query: string,
   mediaType: MediaType = "all",
   page: number = 1,
-  rows: number = 20
+  rows: number = 20,
+  monetizableOnly: boolean = true
 ) => {
   const [data, setData] = useState<SearchResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,9 +112,20 @@ export const useArchiveSearch = (
           searchQuery += ` AND mediatype:${mediaType}`;
         }
         
+        // Add license filters for monetizable content
+        if (monetizableOnly) {
+          // Filter for Public Domain or CC-BY content
+          // Note: This is an approximation as Internet Archive doesn't have perfect license metadata
+          searchQuery += ` AND (licenseurl:(*publicdomain* OR *creativecommons.org/licenses/by/*) OR rights:(*publicdomain* OR *CC-BY*) OR license:(*publicdomain* OR *CC-BY*))`;
+          // Exclude non-commercial licenses
+          searchQuery += ` AND -licenseurl:(*nc* OR *noncommercial* OR *non-commercial*) AND -rights:(*nc* OR *noncommercial* OR *non-commercial*) AND -license:(*nc* OR *noncommercial* OR *non-commercial*)`;
+          // Exclude no-derivatives licenses
+          searchQuery += ` AND -licenseurl:*nd* AND -rights:*nd* AND -license:*nd*`;
+        }
+        
         const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(
           searchQuery
-        )}&output=json&rows=${rows}&page=${page}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=downloads desc`;
+        )}&output=json&rows=${rows}&page=${page}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license&sort[]=downloads desc`;
 
         const response = await fetch(url);
         
@@ -64,9 +135,15 @@ export const useArchiveSearch = (
         
         const responseData = await response.json();
         
+        // Apply additional client-side filtering for better accuracy
+        const filteredItems = monetizableOnly 
+          ? responseData.response.docs.filter((item: ArchiveItem) => 
+              isMonetizableLicense(item.licenseurl, item.rights, item.license))
+          : responseData.response.docs;
+        
         const formattedData = {
-          items: responseData.response.docs,
-          count: responseData.response.docs.length,
+          items: filteredItems,
+          count: filteredItems.length,
           totalResults: responseData.response.numFound
         };
         
@@ -79,12 +156,12 @@ export const useArchiveSearch = (
     };
 
     fetchData();
-  }, [query, mediaType, page, rows]);
+  }, [query, mediaType, page, rows, monetizableOnly]);
 
   return { data, isLoading, error };
 };
 
-export const useFeaturedContent = (mediaType: MediaType = "all", limit: number = 10) => {
+export const useFeaturedContent = (mediaType: MediaType = "all", limit: number = 10, monetizableOnly: boolean = true) => {
   const [data, setData] = useState<ArchiveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -95,16 +172,27 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
       setError(null);
 
       try {
-        let url;
+        let baseQuery = "";
         
-        // Use the collection-based URL for movies
+        // Filter for monetizable content
+        if (monetizableOnly) {
+          // Filter for Public Domain or CC-BY content
+          baseQuery += `(licenseurl:(*publicdomain* OR *creativecommons.org/licenses/by/*) OR rights:(*publicdomain* OR *CC-BY*) OR license:(*publicdomain* OR *CC-BY*))`;
+          // Exclude non-commercial licenses
+          baseQuery += ` AND -licenseurl:(*nc* OR *noncommercial* OR *non-commercial*) AND -rights:(*nc* OR *noncommercial* OR *non-commercial*) AND -license:(*nc* OR *noncommercial* OR *non-commercial*)`;
+          // Exclude no-derivatives licenses
+          baseQuery += ` AND -licenseurl:*nd* AND -rights:*nd* AND -license:*nd*`;
+        }
+        
+        let url;
+        // Use the collection-based URL for movies with license filters
         if (mediaType === "movies") {
-          url = `https://archive.org/advancedsearch.php?q=collection%3Amovies&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate`;
+          url = `https://archive.org/advancedsearch.php?q=collection%3Amovies ${baseQuery}&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license`;
         } else if (mediaType === "audio") {
-          url = `https://archive.org/advancedsearch.php?q=collection%3Aaudio&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate`;
+          url = `https://archive.org/advancedsearch.php?q=collection%3Aaudio ${baseQuery}&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license`;
         } else {
           // For "all" mediaType
-          url = `https://archive.org/advancedsearch.php?q=mediatype:(audio OR movies)&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate`;
+          url = `https://archive.org/advancedsearch.php?q=mediatype:(audio OR movies) ${baseQuery}&output=json&rows=${limit}&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license`;
         }
 
         const response = await fetch(url);
@@ -114,7 +202,14 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
         }
         
         const responseData = await response.json();
-        setData(responseData.response.docs);
+        
+        // Apply additional client-side filtering for better accuracy
+        const filteredItems = monetizableOnly 
+          ? responseData.response.docs.filter((item: ArchiveItem) => 
+              isMonetizableLicense(item.licenseurl, item.rights, item.license))
+          : responseData.response.docs;
+          
+        setData(filteredItems);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('An unknown error occurred'));
       } finally {
@@ -123,12 +218,12 @@ export const useFeaturedContent = (mediaType: MediaType = "all", limit: number =
     };
 
     fetchFeaturedContent();
-  }, [mediaType, limit]);
+  }, [mediaType, limit, monetizableOnly]);
 
   return { data, isLoading, error };
 };
 
-export const searchArchive = async (query: string, mediaType?: string) => {
+export const searchArchive = async (query: string, mediaType?: string, monetizableOnly: boolean = true) => {
   if (!query) {
     return [];
   }
@@ -142,9 +237,19 @@ export const searchArchive = async (query: string, mediaType?: string) => {
       searchQuery += ` AND mediatype:${mediaType}`;
     }
     
+    // Add license filters for monetizable content
+    if (monetizableOnly) {
+      // Filter for Public Domain or CC-BY content
+      searchQuery += ` AND (licenseurl:(*publicdomain* OR *creativecommons.org/licenses/by/*) OR rights:(*publicdomain* OR *CC-BY*) OR license:(*publicdomain* OR *CC-BY*))`;
+      // Exclude non-commercial licenses
+      searchQuery += ` AND -licenseurl:(*nc* OR *noncommercial* OR *non-commercial*) AND -rights:(*nc* OR *noncommercial* OR *non-commercial*) AND -license:(*nc* OR *noncommercial* OR *non-commercial*)`;
+      // Exclude no-derivatives licenses
+      searchQuery += ` AND -licenseurl:*nd* AND -rights:*nd* AND -license:*nd*`;
+    }
+    
     const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(
       searchQuery
-    )}&output=json&rows=20&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate&sort[]=downloads desc`;
+    )}&output=json&rows=20&fl[]=identifier,title,description,mediatype,collection,date,creator,subject,thumb,downloads,year,publicdate,licenseurl,rights,license&sort[]=downloads desc`;
 
     const response = await fetch(url);
     
@@ -153,7 +258,14 @@ export const searchArchive = async (query: string, mediaType?: string) => {
     }
     
     const responseData = await response.json();
-    return responseData.response.docs;
+    
+    // Apply additional client-side filtering for better accuracy
+    const filteredItems = monetizableOnly 
+      ? responseData.response.docs.filter((item: ArchiveItem) => 
+          isMonetizableLicense(item.licenseurl, item.rights, item.license))
+      : responseData.response.docs;
+      
+    return filteredItems;
   } catch (err) {
     console.error("Error searching archive:", err);
     throw err;
@@ -171,6 +283,13 @@ export const getItemDetails = async (identifier: string) => {
     
     const metadata = await metadataResponse.json();
     console.log("Metadata received:", metadata);
+    
+    // Check if this item is legally monetizable
+    const isLegallyMonetizable = isMonetizableLicense(
+      metadata.metadata.licenseurl,
+      metadata.metadata.rights,
+      metadata.metadata.license
+    );
     
     // Add a thumbnailUrl property for easier access
     const thumbnailUrl = `https://archive.org/services/img/${identifier}`;
@@ -244,6 +363,10 @@ export const getItemDetails = async (identifier: string) => {
       thumbnailUrl,
       downloads: parseInt(metadata.metadata.downloads || '0', 10),
       files: sortedFiles || [],
+      license: metadata.metadata.license,
+      licenseurl: metadata.metadata.licenseurl,
+      rights: metadata.metadata.rights,
+      isLegallyMonetizable: isLegallyMonetizable,
     };
   } catch (error) {
     console.error("Error fetching item details:", error);
@@ -293,6 +416,17 @@ export const isPlayableMediaFile = (file: any) => {
   }
   
   return false;
+};
+
+// Helper function to check the monetization status of a specific item
+export const checkItemMonetizableStatus = async (identifier: string): Promise<boolean> => {
+  try {
+    const itemDetails = await getItemDetails(identifier);
+    return itemDetails.isLegallyMonetizable;
+  } catch (error) {
+    console.error("Error checking monetization status:", error);
+    return false;
+  }
 };
 
 export const getItemImageUrl = (identifier: string) => {

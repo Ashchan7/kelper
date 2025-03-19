@@ -8,8 +8,8 @@ import { Film } from "lucide-react";
 
 const MoviesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const featuredMovies = useFeaturedContent("movies", 16);
-  const searchResults = useArchiveSearch(searchQuery, "movies");
+  const featuredMovies = useFeaturedContent("movies", 16, true); // Set monetizableOnly to true
+  const searchResults = useArchiveSearch(searchQuery, "movies", 1, 20, true); // Set monetizableOnly to true
   
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -27,7 +27,7 @@ const MoviesPage = () => {
           <Film className="w-10 h-10 mb-3 mx-auto opacity-50" />
           <h1 className="text-3xl md:text-4xl font-medium mb-4">Movies Collection</h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Explore a vast archive of classic films, documentaries, and more from the Internet Archive.
+            Explore a vast archive of legally sharable films, documentaries, and more from the Internet Archive.
           </p>
         </motion.div>
         
@@ -47,8 +47,8 @@ const MoviesPage = () => {
         <ContentGrid 
           items={featuredMovies.data} 
           isLoading={featuredMovies.isLoading}
-          title="Popular Movies"
-          description="The most viewed and downloaded movies from the Internet Archive"
+          title="Popular Public Domain Movies"
+          description="The most viewed and legally shareable movies from the Internet Archive"
         />
       )}
     </div>

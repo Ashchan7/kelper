@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
@@ -57,16 +56,11 @@ const PlayerPage = () => {
     }
   }, [error, toast]);
   
-  // Check if content is legally monetizable
+  // Check if item is legally monetizable
   useEffect(() => {
     if (itemDetails) {
-      if (!itemDetails.isLegallyMonetizable) {
-        console.warn("Non-monetizable content detected:", itemDetails.identifier);
-        setLicenseError("This content cannot be displayed due to licensing restrictions. Only content with Public Domain (CC0) or Creative Commons Attribution (CC-BY) licenses can be shown.");
-        setActiveMedia("");
-      } else {
-        setLicenseError(null);
-      }
+      // Always set licenseError to null to allow all content
+      setLicenseError(null);
     }
   }, [itemDetails]);
   
@@ -292,6 +286,7 @@ const PlayerPage = () => {
   // Check if files appear to be episodes based on filenames
   const hasEpisodes = episodeFiles.length > 0;
   
+  // Remove the license restriction alert from the UI
   return (
     <div className="pt-20 pb-28 md:pb-20 px-4 md:px-8 max-w-7xl mx-auto">
       {isLoading ? (
@@ -307,35 +302,6 @@ const PlayerPage = () => {
           <div className="flex justify-center gap-4 mt-6">
             <Button onClick={() => refetch()} variant="outline">Try Again</Button>
             <Button onClick={() => navigate('/')} variant="default">Go Home</Button>
-          </div>
-        </div>
-      ) : licenseError ? (
-        <div className="text-center py-8">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold mb-4">Content Unavailable</h2>
-          <Alert variant="destructive" className="max-w-2xl mx-auto mb-4">
-            <AlertTitle>Licensing Restriction</AlertTitle>
-            <AlertDescription>{licenseError}</AlertDescription>
-          </Alert>
-          <p className="text-gray-500 max-w-2xl mx-auto mb-6">
-            For legal compliance and monetization purposes, we can only display content with appropriate licensing. 
-            You can still access this content directly on the Internet Archive website.
-          </p>
-          <div className="flex justify-center gap-4 mt-6">
-            <Button onClick={() => navigate('/')} variant="outline">Go Home</Button>
-            <Button 
-              variant="default" 
-              asChild
-            >
-              <a 
-                href={`https://archive.org/details/${id}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                View on Archive.org
-              </a>
-            </Button>
           </div>
         </div>
       ) : (

@@ -8,9 +8,9 @@ import { Music } from "lucide-react";
 
 const MusicPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  // Set monetizableOnly to true and allow extended search if results are empty
-  const featuredMusic = useFeaturedContent("audio", 16, true);
-  const searchResults = useArchiveSearch(searchQuery, "audio", 1, 20, true, true);
+  // Remove monetizableOnly filter to get all content
+  const featuredMusic = useFeaturedContent("audio", 16, false);
+  const searchResults = useArchiveSearch(searchQuery, "audio", 1, 20, false, true);
   
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -28,7 +28,7 @@ const MusicPage = () => {
           <Music className="w-10 h-10 mb-3 mx-auto opacity-50" />
           <h1 className="text-3xl md:text-4xl font-medium mb-4">Music Collection</h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Discover a rich collection of legally shareable music, live concerts, and recordings from the Internet Archive.
+            Discover a rich collection of music, live concerts, and recordings from the Internet Archive.
           </p>
         </motion.div>
         
@@ -41,15 +41,15 @@ const MusicPage = () => {
           isLoading={searchResults.isLoading}
           title={`Search Results for "${searchQuery}"`}
           description={searchResults.data?.totalResults 
-            ? `Found ${searchResults.data.totalResults} legally shareable results` 
-            : "Only displaying content with appropriate licensing for legal reuse"}
+            ? `Found ${searchResults.data.totalResults} results` 
+            : "Showing all available music content"}
         />
       ) : (
         <ContentGrid 
           items={featuredMusic.data} 
           isLoading={featuredMusic.isLoading}
-          title="Popular Legal Music"
-          description="The most listened to legally shareable music from the Internet Archive"
+          title="Popular Music"
+          description="The most listened to music from the Internet Archive"
         />
       )}
     </div>

@@ -8,9 +8,9 @@ import { Film } from "lucide-react";
 
 const MoviesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  // Set monetizableOnly to true and allow extended search if results are empty
-  const featuredMovies = useFeaturedContent("movies", 16, true);
-  const searchResults = useArchiveSearch(searchQuery, "movies", 1, 20, true, true);
+  // Remove monetizableOnly filter to get all content
+  const featuredMovies = useFeaturedContent("movies", 16, false);
+  const searchResults = useArchiveSearch(searchQuery, "movies", 1, 20, false, true);
   
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -28,7 +28,7 @@ const MoviesPage = () => {
           <Film className="w-10 h-10 mb-3 mx-auto opacity-50" />
           <h1 className="text-3xl md:text-4xl font-medium mb-4">Movies Collection</h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Explore a vast archive of legally sharable films, documentaries, and more from the Internet Archive.
+            Explore a vast archive of films, documentaries, and more from the Internet Archive.
           </p>
         </motion.div>
         
@@ -41,15 +41,15 @@ const MoviesPage = () => {
           isLoading={searchResults.isLoading}
           title={`Search Results for "${searchQuery}"`}
           description={searchResults.data?.totalResults 
-            ? `Found ${searchResults.data.totalResults} legally shareable results` 
-            : "Only displaying content with appropriate licensing for legal reuse"}
+            ? `Found ${searchResults.data.totalResults} results` 
+            : "Showing all available movie content"}
         />
       ) : (
         <ContentGrid 
           items={featuredMovies.data} 
           isLoading={featuredMovies.isLoading}
-          title="Popular Public Domain Movies"
-          description="The most viewed and legally shareable movies from the Internet Archive"
+          title="Popular Movies"
+          description="The most viewed movies from the Internet Archive"
         />
       )}
     </div>

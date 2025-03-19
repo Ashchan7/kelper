@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -43,11 +42,9 @@ const DMCAPage = () => {
                 You can submit your DMCA notice to our designated copyright agent at:
               </p>
               <address className="not-italic mt-2">
-                DMCA Agent<br />
+                DMCA Agent: Ash<br />
                 Kelper<br />
-                123 Archive Street<br />
-                San Francisco, CA 94103<br />
-                Email: dmca@kelper.com
+                Email: thekelperzone@gmail.com, Ashhhteroid@gmail.com
               </address>
             </section>
             

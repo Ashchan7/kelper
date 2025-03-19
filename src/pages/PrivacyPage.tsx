@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -197,11 +196,9 @@ const PrivacyPage = () => {
                 If you have any questions about this Privacy Policy, please contact our Data Protection Officer:
               </p>
               <address className="not-italic mt-2">
-                Data Protection Officer<br />
+                Data Protection Officer: Ash<br />
                 Kelper<br />
-                Email: privacy@kelper.com<br />
-                Phone: +1 (234) 567-890<br />
-                Address: 123 Archive Street, San Francisco, CA 94103
+                Email: thekelperzone@gmail.com, Ashhhteroid@gmail.com
               </address>
             </section>
           </div>

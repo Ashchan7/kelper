@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -183,9 +182,7 @@ const TermsPage = () => {
                 For any questions about these Terms of Service, please contact us at:
               </p>
               <address className="not-italic mt-2">
-                Email: legal@kelper.com<br />
-                Phone: +1 (234) 567-890<br />
-                Address: 123 Archive Street, San Francisco, CA 94103
+                Email: thekelperzone@gmail.com, Ashhhteroid@gmail.com
               </address>
             </section>
           </div>

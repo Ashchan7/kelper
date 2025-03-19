@@ -8,6 +8,7 @@ interface LoaderProps {
   color?: "default" | "white" | "primary";
   visible?: boolean;
   autoHide?: boolean;
+  disableForPlayers?: boolean;
 }
 
 const Loader = ({ 
@@ -15,7 +16,8 @@ const Loader = ({
   size = "default", 
   color = "default",
   visible = true,
-  autoHide = false
+  autoHide = false,
+  disableForPlayers = false
 }: LoaderProps) => {
   const [isVisible, setIsVisible] = useState(visible);
   
@@ -108,6 +110,25 @@ const Loader = ({
       });
     };
   }, [autoHide, visible]);
+
+  // For player components, disable loader completely if disableForPlayers is true
+  useEffect(() => {
+    if (!disableForPlayers) return;
+    
+    // Check if this loader is within a player component
+    const isInPlayer = () => {
+      if (typeof document === 'undefined') return false;
+      
+      const closestPlayer = document.querySelector('.w-full audio, .w-full video');
+      if (closestPlayer) {
+        setIsVisible(false);
+        return true;
+      }
+      return false;
+    };
+    
+    isInPlayer();
+  }, [disableForPlayers]);
   
   // Respect both the passed visible prop and internal state
   const shouldDisplay = visible && isVisible;

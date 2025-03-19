@@ -6,9 +6,14 @@ import { motion } from "framer-motion";
 interface PageLoaderProps {
   visible?: boolean;
   autoHide?: boolean;
+  disableForPlayers?: boolean;
 }
 
-const PageLoader = ({ visible = true, autoHide = true }: PageLoaderProps) => {
+const PageLoader = ({ 
+  visible = true, 
+  autoHide = true,
+  disableForPlayers = true
+}: PageLoaderProps) => {
   if (!visible) return null;
 
   return (
@@ -19,7 +24,7 @@ const PageLoader = ({ visible = true, autoHide = true }: PageLoaderProps) => {
       transition={{ duration: 0.3 }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm"
     >
-      <Loader size="large" autoHide={autoHide} />
+      <Loader size="large" autoHide={autoHide} disableForPlayers={disableForPlayers} />
     </motion.div>
   );
 };

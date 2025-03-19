@@ -23,14 +23,15 @@ interface EpisodeSelectorProps {
   onEpisodeSelect: (episodeUrl: string, episodeName: string, file?: MediaFile) => void;
 }
 
-// Check if file is a video file with expanded file extensions
+// Enhanced check for video files with expanded file extensions
 const isVideoFile = (file: MediaFile) => {
   const name = file.name.toLowerCase();
   const format = (file.format || '').toLowerCase();
   
   const videoExtensions = [
     '.mp4', '.webm', '.mov', '.avi', '.mkv', '.ogv', '.m4v', 
-    '.mpg', '.mpeg', '.3gp', '.flv', '.wmv', '.ts', '.mts', '.m2ts'
+    '.mpg', '.mpeg', '.3gp', '.flv', '.wmv', '.ts', '.mts', '.m2ts',
+    '.vob', '.asf', '.rm', '.rmvb', '.m2v', '.divx', '.mp2'
   ];
   
   // Check if file has a video extension
@@ -41,19 +42,26 @@ const isVideoFile = (file: MediaFile) => {
                          format.includes('mp4') || 
                          format.includes('matroska') ||
                          format.includes('webm') ||
-                         format.includes('x-msvideo');
+                         format.includes('avi') ||
+                         format.includes('quicktime') ||
+                         format.includes('x-msvideo') ||
+                         format.includes('mpeg');
   
-  return hasVideoExtension || hasVideoFormat;
+  // Check dimensions - if has width and height, it's likely a video
+  const hasDimensions = file.width && file.height;
+  
+  return hasVideoExtension || hasVideoFormat || hasDimensions;
 };
 
-// Check if file is an audio file with expanded file extensions
+// Enhanced check for audio files with expanded file extensions
 const isAudioFile = (file: MediaFile) => {
   const name = file.name.toLowerCase();
   const format = (file.format || '').toLowerCase();
   
   const audioExtensions = [
     '.mp3', '.ogg', '.wav', '.flac', '.m4a', '.aac', '.opus',
-    '.wma', '.alac', '.aiff', '.ape', '.wv', '.midi', '.mid'
+    '.wma', '.alac', '.aiff', '.ape', '.wv', '.midi', '.mid',
+    '.amr', '.au', '.aac', '.voc', '.ra', '.ram', '.dss'
   ];
   
   // Check if file has an audio extension
@@ -64,14 +72,39 @@ const isAudioFile = (file: MediaFile) => {
                          format.includes('mp3') || 
                          format.includes('ogg') || 
                          format.includes('wav') ||
+                         format.includes('flac') ||
+                         format.includes('aac') ||
                          format.includes('mpeg');
   
-  return hasAudioExtension || hasAudioFormat;
+  // If it has length but no dimensions, likely an audio file
+  const hasLengthOnly = file.length && (!file.width && !file.height);
+  
+  return hasAudioExtension || hasAudioFormat || hasLengthOnly;
 };
 
-// Check if file appears to be a valid media file for playback
-// Expanded to consider more properties that indicate playable media
+// Enhanced check for playable media considering more properties
 const isPlayableMedia = (file: MediaFile) => {
+  // Skip common non-media files
+  const lowerName = file.name.toLowerCase();
+  const skipExtensions = ['.txt', '.nfo', '.jpg', '.jpeg', '.png', '.gif', '.pdf', '.zip', '.rar', '.srt', '.vtt', '.sub'];
+  if (skipExtensions.some(ext => lowerName.endsWith(ext))) {
+    return false;
+  }
+  
+  // If file is in a subdirectory like thumbnails, skip it
+  if (file.name.includes('/')) {
+    const folderName = file.name.split('/')[0].toLowerCase();
+    const skipFolders = ['thumbnails', 'covers', 'artwork', 'images', 'docs', 'texts', 'subtitles'];
+    if (skipFolders.includes(folderName)) {
+      return false;
+    }
+  }
+  
+  // Check if it's a derivative like a thumbnail
+  if (lowerName.includes('_thumb.') || lowerName.includes('_sample.')) {
+    return false;
+  }
+  
   // If file has a length property, it's likely a playable media
   if (file.length) {
     return true;
@@ -79,6 +112,54 @@ const isPlayableMedia = (file: MediaFile) => {
   
   // Check by file format and extension
   return isVideoFile(file) || isAudioFile(file);
+};
+
+// Calculate the best format for each media based on file-specific heuristics
+const getBestFormatVersion = (files: MediaFile[], originalFile: MediaFile): MediaFile => {
+  const baseName = originalFile.name.split('.').slice(0, -1).join('.');
+  const isVideo = isVideoFile(originalFile);
+  
+  // For video files, prefer mp4 derivatives for better browser compatibility
+  if (isVideo) {
+    // First try to find an mp4 derivative of the same file
+    const mp4Version = files.find(file => 
+      file.name.startsWith(baseName) && 
+      file.name.endsWith('.mp4') && 
+      file.source === 'derivative'
+    );
+    
+    if (mp4Version) return mp4Version;
+    
+    // Then try to find a webm version
+    const webmVersion = files.find(file => 
+      file.name.startsWith(baseName) && 
+      file.name.endsWith('.webm') && 
+      file.source === 'derivative'
+    );
+    
+    if (webmVersion) return webmVersion;
+  } else {
+    // For audio, prefer mp3 for compatibility
+    const mp3Version = files.find(file => 
+      file.name.startsWith(baseName) && 
+      file.name.endsWith('.mp3') && 
+      file.source === 'derivative'
+    );
+    
+    if (mp3Version) return mp3Version;
+    
+    // Then try ogg
+    const oggVersion = files.find(file => 
+      file.name.startsWith(baseName) && 
+      file.name.endsWith('.ogg') && 
+      file.source === 'derivative'
+    );
+    
+    if (oggVersion) return oggVersion;
+  }
+  
+  // If no better version found, return the original
+  return originalFile;
 };
 
 const EpisodeSelector = ({ 
@@ -127,7 +208,7 @@ const EpisodeSelector = ({
     
     // Clean up the name - expand the list of extensions to remove
     episodeName = filename
-      .replace(/\.(mp4|webm|mov|avi|mkv|ogv|m4v|mp3|ogg|wav|flac|m4a|aac|opus|wma|mpg|mpeg|3gp|flv|wmv)$/i, "")  // Remove extension
+      .replace(/\.(mp4|webm|mov|avi|mkv|ogv|m4v|mp3|ogg|wav|flac|m4a|aac|opus|wma|mpg|mpeg|3gp|flv|wmv|ts)$/i, "")  // Remove extension
       .replace(/[\._]/g, " ")                              // Replace dots and underscores with spaces
       .replace(/\b(EP|E|Episode|Part|Track)\s*\d+\b/i, "")       // Remove episode markers
       .trim();
@@ -180,19 +261,23 @@ const EpisodeSelector = ({
     // Only proceed if this is a valid media file
     if (isPlayableMedia(file)) {
       try {
+        // Find the best version of this file for playback
+        const bestFormatFile = getBestFormatVersion(episodeFiles, file);
+        console.log("Selected best format:", bestFormatFile.name);
+        
         // Construct a clean URL with proper encoding
-        const episodeUrl = `https://archive.org/download/${itemId}/${encodeURIComponent(file.name)}`;
+        const episodeUrl = `https://archive.org/download/${itemId}/${encodeURIComponent(bestFormatFile.name)}`;
         
         console.log("Selected episode:", {
           url: episodeUrl,
-          name: file.name,
-          format: file.format,
-          isPlayable: isPlayableMedia(file),
-          isVideo: isVideoFile(file),
-          isAudio: isAudioFile(file)
+          name: bestFormatFile.name,
+          format: bestFormatFile.format,
+          isPlayable: isPlayableMedia(bestFormatFile),
+          isVideo: isVideoFile(bestFormatFile),
+          isAudio: isAudioFile(bestFormatFile)
         });
         
-        onEpisodeSelect(episodeUrl, getEpisodeInfo(file.name).displayName, file);
+        onEpisodeSelect(episodeUrl, getEpisodeInfo(file.name).displayName, bestFormatFile);
         
         toast({
           title: mediaType === 'video' ? "Loading episode" : "Loading track",
@@ -218,8 +303,28 @@ const EpisodeSelector = ({
     }
   };
   
-  // Filter for only playable media files
-  const playableEpisodes = sortedEpisodes.filter(isPlayableMedia);
+  // Filter for only playable media files and remove duplicates by preferred format
+  const getUniquePlayableEpisodes = () => {
+    const playable = sortedEpisodes.filter(isPlayableMedia);
+    
+    // Group files by their base name (without extension)
+    const groupedByBaseName = playable.reduce((acc, file) => {
+      const baseName = file.name.split('.').slice(0, -1).join('.');
+      if (!acc[baseName]) acc[baseName] = [];
+      acc[baseName].push(file);
+      return acc;
+    }, {} as Record<string, MediaFile[]>);
+    
+    // For each group, select the best version
+    const bestVersions = Object.values(groupedByBaseName).map(group => {
+      // For derivatives group, select the best format
+      return getBestFormatVersion(group, group[0]);
+    });
+    
+    return bestVersions;
+  };
+  
+  const playableEpisodes = getUniquePlayableEpisodes();
   
   console.log("Playable episodes found:", playableEpisodes.length);
   

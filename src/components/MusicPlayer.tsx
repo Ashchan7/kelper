@@ -31,9 +31,12 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
   const [repeatMode, setRepeatMode] = useState<'none' | 'all' | 'one'>('none');
   const [isExpanded, setIsExpanded] = useState(false);
   
-  // Add states for error handling
+  // Enhanced states for format support and fallbacks
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [fallbackSources, setFallbackSources] = useState<string[]>([]);
+  const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
+  const [attemptingFallback, setAttemptingFallback] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const playlistRef = useRef<HTMLDivElement>(null);
@@ -48,6 +51,78 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
   
+  // Generate fallback sources
+  useEffect(() => {
+    if (currentTrack?.src) {
+      generateFallbackSources(currentTrack.src);
+    }
+  }, [currentTrack]);
+  
+  // Generate fallback sources for various formats
+  const generateFallbackSources = (originalSrc: string) => {
+    if (!originalSrc) return;
+    
+    try {
+      const urlParts = originalSrc.split('/');
+      const filename = urlParts.pop() || '';
+      const basePath = urlParts.join('/');
+      
+      // Extract base filename without extension
+      const baseFilename = filename.split('.').slice(0, -1).join('.');
+      const extension = filename.split('.').pop()?.toLowerCase() || '';
+      
+      // Create an array of possible fallback sources
+      const possibleExtensions = ['mp3', 'ogg', 'wav', 'flac', 'm4a', 'aac', 'opus'];
+      
+      // Only add extensions different from the current one
+      const fallbacks = possibleExtensions
+        .filter(ext => ext !== extension)
+        .map(ext => {
+          // Check for derivatives or other versions
+          if (originalSrc.includes('.ia.')) {
+            // Archive.org derivative format
+            return `${basePath}/${baseFilename}.ia.${ext}`;
+          } else {
+            // Regular format
+            return `${basePath}/${baseFilename}.${ext}`;
+          }
+        });
+      
+      // Also try original/derivative versions
+      if (!originalSrc.includes('.ia.')) {
+        fallbacks.push(`${basePath}/${baseFilename}.ia.mp3`);
+      }
+      
+      console.log("Generated audio fallback sources:", fallbacks);
+      setFallbackSources(fallbacks);
+      
+    } catch (error) {
+      console.error("Error generating fallback sources:", error);
+    }
+  };
+  
+  // Try next fallback source
+  const tryNextSource = () => {
+    if (currentSourceIndex < fallbackSources.length) {
+      setAttemptingFallback(true);
+      const nextSource = fallbackSources[currentSourceIndex];
+      console.log(`Trying fallback audio source #${currentSourceIndex + 1}:`, nextSource);
+      
+      setCurrentSourceIndex(prevIndex => prevIndex + 1);
+      
+      // Reset audio element
+      if (audioRef.current) {
+        audioRef.current.src = nextSource;
+        audioRef.current.load();
+      }
+    } else {
+      // All fallbacks failed
+      setAttemptingFallback(false);
+      setLoadError("Unable to play this audio track. The format may not be supported by your browser.");
+      console.error("All fallback sources failed");
+    }
+  };
+  
   // Handle play/pause
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -56,7 +131,20 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play();
+      audio.play().catch(err => {
+        console.error("Error playing audio:", err);
+        
+        // If it's a format issue, try fallbacks
+        if (err.name === "NotSupportedError" && fallbackSources.length > 0) {
+          tryNextSource();
+        } else {
+          toast({
+            title: "Playback error",
+            description: "Could not play this audio track.",
+            variant: "destructive",
+          });
+        }
+      });
     }
     
     setIsPlaying(!isPlaying);
@@ -78,10 +166,20 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     setDuration(audio.duration);
     setIsLoading(false);
     setLoadError(null);
+    setAttemptingFallback(false);
     
     // If there's a predefined duration in the track data, use that
     if (currentTrack?.duration) {
       setDuration(currentTrack.duration);
+    }
+    
+    // If we were previously showing an error but fallback succeeded
+    if (loadError) {
+      toast({
+        title: "Audio loaded",
+        description: "Alternative format loaded successfully",
+        duration: 2000,
+      });
     }
   };
   
@@ -93,7 +191,7 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
       if (!audio) return;
       
       audio.currentTime = 0;
-      audio.play();
+      audio.play().catch(err => console.error("Error repeating track:", err));
     } else if (repeatMode === 'all' || currentTrackIndex < tracks.length - 1) {
       // Go to next track, or loop back to first track if in repeat all mode
       handleNext();
@@ -125,6 +223,10 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     setCurrentTrackIndex(nextIndex);
     setCurrentTime(0);
     
+    // Reset fallback system for new track
+    setCurrentSourceIndex(0);
+    setAttemptingFallback(false);
+    
     // Play automatically when switching tracks
     setTimeout(() => {
       const audio = audioRef.current;
@@ -132,7 +234,14 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
       
       audio.play()
         .then(() => setIsPlaying(true))
-        .catch(err => console.error("Error playing audio:", err));
+        .catch(err => {
+          console.error("Error playing audio:", err);
+          
+          // If it's a format issue, try fallbacks
+          if (err.name === "NotSupportedError" && fallbackSources.length > 0) {
+            tryNextSource();
+          }
+        });
     }, 0);
   };
   
@@ -168,6 +277,10 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     setCurrentTrackIndex(prevIndex);
     setCurrentTime(0);
     
+    // Reset fallback system for new track
+    setCurrentSourceIndex(0);
+    setAttemptingFallback(false);
+    
     // Play automatically when switching tracks
     setTimeout(() => {
       const audio = audioRef.current;
@@ -175,7 +288,14 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
       
       audio.play()
         .then(() => setIsPlaying(true))
-        .catch(err => console.error("Error playing audio:", err));
+        .catch(err => {
+          console.error("Error playing audio:", err);
+          
+          // If it's a format issue, try fallbacks
+          if (err.name === "NotSupportedError" && fallbackSources.length > 0) {
+            tryNextSource();
+          }
+        });
     }, 0);
   };
   
@@ -226,10 +346,14 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     setIsShuffled(!isShuffled);
   };
   
-  // Handle track selection from playlist
+  // Track selection from playlist (if implemented)
   const selectTrack = (index: number) => {
     setCurrentTrackIndex(index);
     setCurrentTime(0);
+    
+    // Reset fallback system for new track
+    setCurrentSourceIndex(0);
+    setAttemptingFallback(false);
     
     setTimeout(() => {
       const audio = audioRef.current;
@@ -237,21 +361,42 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
       
       audio.play()
         .then(() => setIsPlaying(true))
-        .catch(err => console.error("Error playing audio:", err));
+        .catch(err => {
+          console.error("Error playing audio after track selection:", err);
+          
+          // If it's a format issue, try fallbacks
+          if (err.name === "NotSupportedError" && fallbackSources.length > 0) {
+            tryNextSource();
+          }
+        });
     }, 0);
   };
   
-  // Add error handling for audio loading
+  // Enhanced error handling for audio loading
   const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
     const audio = e.currentTarget;
     console.error("Audio loading error:", audio.error);
-    setLoadError("Failed to load audio. Please try again later.");
-    setIsPlaying(false);
-    toast({
-      title: "Audio Error",
-      description: "Could not load the audio file. Please try another track.",
-      variant: "destructive",
-    });
+    
+    // If we're already trying fallbacks
+    if (attemptingFallback) {
+      tryNextSource();
+      return;
+    }
+    
+    // First error, let's try fallbacks
+    if (fallbackSources.length > 0) {
+      console.log("Primary audio format failed, trying fallbacks...");
+      tryNextSource();
+    } else {
+      // No fallbacks available
+      setLoadError("Failed to load audio. The format may not be supported.");
+      setIsPlaying(false);
+      toast({
+        title: "Audio Error",
+        description: "Could not load the audio file. Please try another track.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Add a function to retry loading
@@ -261,10 +406,21 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     
     setLoadError(null);
     setIsLoading(true);
+    setCurrentSourceIndex(0);
+    setAttemptingFallback(false);
+    
+    // Reload with original source
+    audio.src = currentTrack.src;
     audio.load();
+    
+    toast({
+      title: "Retrying",
+      description: "Attempting to reload the audio",
+      duration: 2000,
+    });
   };
   
-  // Update autoplay handling
+  // Update when track changes
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
@@ -275,6 +431,8 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
     // Reset error and loading states
     setLoadError(null);
     setIsLoading(true);
+    setCurrentSourceIndex(0);
+    setAttemptingFallback(false);
     
     // If was playing, attempt to start playing the new track
     if (isPlaying) {
@@ -292,6 +450,10 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
               duration: 5000,
             });
           }
+          // If it's a format issue, try fallbacks
+          else if (err.name === "NotSupportedError" && fallbackSources.length > 0) {
+            tryNextSource();
+          }
         });
       }, 100);
     }
@@ -299,9 +461,12 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
   
   return (
     <div className="w-full">
+      {/* Enhanced audio element with fallback support */}
       <audio
         ref={audioRef}
-        src={currentTrack.src}
+        src={attemptingFallback && currentSourceIndex > 0 && currentSourceIndex <= fallbackSources.length 
+          ? fallbackSources[currentSourceIndex - 1] 
+          : currentTrack.src}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleMetadataLoaded}
         onEnded={handleTrackEnd}
@@ -315,7 +480,7 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
         layout
         transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 25 }}
       >
-        {loadError ? (
+        {loadError && !attemptingFallback ? (
           <div className="p-4 text-center">
             <div className="py-8">
               <div className="mb-4 text-red-500">
@@ -323,6 +488,17 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                 <p className="text-sm text-gray-400">{loadError}</p>
               </div>
               <Button onClick={retryLoading}>Retry</Button>
+              {currentTrack?.src && (
+                <Button variant="outline" className="ml-2" asChild>
+                  <a 
+                    href={currentTrack.src} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                  >
+                    Open Audio Directly
+                  </a>
+                </Button>
+              )}
             </div>
           </div>
         ) : (
@@ -350,6 +526,13 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                   {currentTrack.artist || "Unknown Artist"}
                 </p>
                 
+                {/* Show loading indicator if attempting fallback */}
+                {attemptingFallback && (
+                  <p className="text-xs text-primary mt-1">
+                    Trying alternative format...
+                  </p>
+                )}
+                
                 {/* Progress Slider (Mobile) */}
                 <div className="mt-2 md:hidden">
                   <Slider 
@@ -359,6 +542,7 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                     step={1}
                     onValueChange={handleSeek}
                     className="w-full"
+                    disabled={isLoading || attemptingFallback}
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>{formatTime(currentTime)}</span>
@@ -374,6 +558,7 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                   size="icon"
                   className="rounded-full text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-white/10"
                   onClick={handlePrevious}
+                  disabled={tracks.length <= 1}
                 >
                   <SkipBack className="w-5 h-5" />
                 </Button>
@@ -383,8 +568,11 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                   size="icon"
                   className="rounded-full w-10 h-10 bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-transform"
                   onClick={togglePlay}
+                  disabled={isLoading && !attemptingFallback}
                 >
-                  {isPlaying ? (
+                  {isLoading || attemptingFallback ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white/80 dark:border-black/30 dark:border-t-black/80 rounded-full animate-spin" />
+                  ) : isPlaying ? (
                     <Pause className="w-5 h-5" />
                   ) : (
                     <Play className="w-5 h-5" />
@@ -396,6 +584,7 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                   size="icon"
                   className="rounded-full text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-white/10"
                   onClick={handleNext}
+                  disabled={tracks.length <= 1}
                 >
                   <SkipForward className="w-5 h-5" />
                 </Button>
@@ -425,6 +614,7 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                 step={1}
                 onValueChange={handleSeek}
                 className="w-full"
+                disabled={isLoading || attemptingFallback}
               />
             </div>
             
@@ -442,6 +632,7 @@ const MusicPlayer = ({ tracks, initialTrackIndex = 0 }: MusicPlayerProps) => {
                   isShuffled ? "bg-black/10 dark:bg-white/10 text-black dark:text-white" : ""
                 }`}
                 onClick={toggleShuffle}
+                disabled={tracks.length <= 1}
               >
                 <Shuffle className="w-4 h-4" />
               </Button>

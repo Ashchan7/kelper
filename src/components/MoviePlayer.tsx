@@ -31,16 +31,26 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
   const playerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  // Add a state to track loading errors and source type
+  // Enhanced state for format support and fallbacks
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sourceType, setSourceType] = useState<string | null>(null);
+  const [fallbackSources, setFallbackSources] = useState<string[]>([]);
+  const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
+  const [attemptingFallback, setAttemptingFallback] = useState(false);
   
   // Reset state when source changes
   useEffect(() => {
+    if (!src) return;
+    
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
     setLoadError(null);
+    setCurrentSourceIndex(0);
+    setAttemptingFallback(false);
+    
+    // Generate fallback sources if available
+    generateFallbackSources(src);
     
     // This helps ensure the video element reloads properly
     if (videoRef.current) {
@@ -48,35 +58,120 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     }
   }, [src]);
   
-  // Detect source type on src change
-  useEffect(() => {
-    if (!src) return;
+  // Generate fallback sources for various formats
+  const generateFallbackSources = (originalSrc: string) => {
+    if (!originalSrc) return;
     
     try {
-      // Extract file extension
-      const fileExtension = src.split('.').pop()?.toLowerCase();
-      console.log("Video source file extension:", fileExtension);
+      const urlParts = originalSrc.split('/');
+      const filename = urlParts.pop() || '';
+      const basePath = urlParts.join('/');
+      const itemId = basePath.split('/').pop();
       
-      // Set the appropriate source type based on file extension
-      if (fileExtension === 'mp4') {
-        setSourceType('video/mp4');
-      } else if (fileExtension === 'webm') {
-        setSourceType('video/webm');
-      } else if (fileExtension === 'mkv') {
-        setSourceType('video/x-matroska');
-      } else if (fileExtension === 'ogv') {
-        setSourceType('video/ogg');
-      } else {
-        // Default to mp4 for unknown extensions
-        setSourceType('video/mp4');
+      // Extract base filename without extension
+      const baseFilename = filename.split('.').slice(0, -1).join('.');
+      const extension = filename.split('.').pop()?.toLowerCase() || '';
+      
+      // Create an array of possible fallback sources
+      const possibleExtensions = ['mp4', 'webm', 'ogv', 'mov'];
+      
+      // Only add extensions different from the current one
+      const fallbacks = possibleExtensions
+        .filter(ext => ext !== extension)
+        .map(ext => {
+          // Check for derivatives or other versions
+          if (originalSrc.includes('.ia.')) {
+            // Archive.org derivative format
+            return `${basePath}/${baseFilename}.ia.${ext}`;
+          } else {
+            // Regular format
+            return `${basePath}/${baseFilename}.${ext}`;
+          }
+        });
+      
+      // Also add possible derivatives
+      if (!originalSrc.includes('.ia.')) {
+        fallbacks.push(`${basePath}/${baseFilename}.ia.mp4`);
       }
       
-      // Reset error state when source changes
-      setLoadError(null);
+      console.log("Generated fallback sources:", fallbacks);
+      setFallbackSources(fallbacks);
+      
+      // Determine current source format
+      detectSourceFormat(extension);
+      
     } catch (error) {
-      console.error("Error processing video source:", error);
+      console.error("Error generating fallback sources:", error);
     }
-  }, [src]);
+  };
+  
+  // Detect source format based on extension or URL
+  const detectSourceFormat = (extension: string) => {
+    const format = extension.toLowerCase();
+    let mimeType = 'video/mp4'; // Default
+    
+    switch (format) {
+      case 'mp4':
+      case 'm4v':
+        mimeType = 'video/mp4';
+        break;
+      case 'webm':
+        mimeType = 'video/webm';
+        break;
+      case 'ogv':
+      case 'ogg':
+        mimeType = 'video/ogg';
+        break;
+      case 'mov':
+        mimeType = 'video/quicktime';
+        break;
+      case 'avi':
+        mimeType = 'video/x-msvideo';
+        break;
+      case 'wmv':
+        mimeType = 'video/x-ms-wmv';
+        break;
+      case 'flv':
+        mimeType = 'video/x-flv';
+        break;
+      case 'mkv':
+        mimeType = 'video/x-matroska';
+        break;
+      case 'ts':
+        mimeType = 'video/mp2t';
+        break;
+      default:
+        mimeType = 'video/mp4'; // Default to MP4
+    }
+    
+    console.log(`Detected format: ${format}, MIME type: ${mimeType}`);
+    setSourceType(mimeType);
+  };
+  
+  // Try next fallback source
+  const tryNextSource = () => {
+    if (currentSourceIndex < fallbackSources.length) {
+      setAttemptingFallback(true);
+      const nextSource = fallbackSources[currentSourceIndex];
+      console.log(`Trying fallback source #${currentSourceIndex + 1}:`, nextSource);
+      
+      // Determine format for the new source
+      const extension = nextSource.split('.').pop()?.toLowerCase() || '';
+      detectSourceFormat(extension);
+      
+      setCurrentSourceIndex(prevIndex => prevIndex + 1);
+      
+      // Reset video element
+      if (videoRef.current) {
+        videoRef.current.load();
+      }
+    } else {
+      // All fallbacks failed
+      setAttemptingFallback(false);
+      setLoadError("Unable to play this video. None of the available formats are supported by your browser.");
+      console.error("All fallback sources failed");
+    }
+  };
   
   // Control visibility timer
   useEffect(() => {
@@ -107,7 +202,17 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     if (isPlaying) {
       video.pause();
     } else {
-      video.play();
+      video.play().catch(err => {
+        console.error("Error playing video:", err);
+        // If autoplay was blocked, inform the user
+        if (err.name === "NotAllowedError") {
+          toast({
+            title: "Autoplay blocked",
+            description: "Click the play button to start playback",
+            duration: 3000,
+          });
+        }
+      });
     }
     
     setIsPlaying(!isPlaying);
@@ -194,46 +299,67 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
     console.error("Video loading error:", video.error?.code, video.error?.message);
-    console.error("Video source that failed:", src);
     
-    // More specific error messages based on error code
-    let errorMessage = "Failed to load video.";
-    if (video.error) {
-      switch (video.error.code) {
-        case 1: // MEDIA_ERR_ABORTED
-          errorMessage = "Video playback was aborted.";
-          break;
-        case 2: // MEDIA_ERR_NETWORK
-          errorMessage = "Network error occurred while loading the video.";
-          break;
-        case 3: // MEDIA_ERR_DECODE
-          errorMessage = "Video format is not supported by your browser.";
-          break;
-        case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
-          errorMessage = "This video format is not supported by your browser.";
-          break;
-        default:
-          errorMessage = `Video error: ${video.error.message}`;
-      }
+    // If we're already trying fallbacks and still getting errors
+    if (attemptingFallback) {
+      tryNextSource(); // Try next source
+      return;
     }
     
-    setLoadError(errorMessage);
-    toast({
-      title: "Video Error",
-      description: errorMessage,
-      variant: "destructive",
-    });
+    // First error, let's try fallbacks
+    if (fallbackSources.length > 0) {
+      console.log("Primary format failed, trying fallbacks...");
+      tryNextSource();
+    } else {
+      // No fallbacks available, show error
+      let errorMessage = "Unable to play this video format.";
+      if (video.error) {
+        switch (video.error.code) {
+          case 1: // MEDIA_ERR_ABORTED
+            errorMessage = "Video playback was aborted.";
+            break;
+          case 2: // MEDIA_ERR_NETWORK
+            errorMessage = "Network error occurred while loading the video.";
+            break;
+          case 3: // MEDIA_ERR_DECODE
+            errorMessage = "Video format is not supported by your browser.";
+            break;
+          case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+            errorMessage = "This video format is not supported by your browser.";
+            break;
+          default:
+            errorMessage = `Video error: ${video.error.message}`;
+        }
+      }
+      
+      setLoadError(errorMessage);
+      toast({
+        title: "Video Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
   
-  // Modify metadata loaded handler to clear any previous errors
+  // Modify metadata loaded handler to clear errors and set state
   const handleMetadataLoaded = () => {
     const video = videoRef.current;
     if (!video) return;
     
     setDuration(video.duration);
     setLoadError(null);
-    console.log("Video metadata loaded for source:", src);
-    console.log("Video duration:", video.duration);
+    setAttemptingFallback(false);
+    
+    console.log("Video metadata loaded successfully");
+    
+    // If we were previously showing an error but fallback succeeded
+    if (loadError) {
+      toast({
+        title: "Video loaded",
+        description: "Alternative format loaded successfully",
+        duration: 2000,
+      });
+    }
   };
   
   // Add a function to retry loading the video
@@ -242,7 +368,17 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     if (!video) return;
     
     setLoadError(null);
+    setCurrentSourceIndex(0); // Start from the first source again
+    setAttemptingFallback(false);
+    
+    // Reload current source
     video.load();
+    
+    toast({
+      title: "Retrying playback",
+      description: "Attempting to reload the video",
+      duration: 2000,
+    });
   };
   
   // Skip forward/backward
@@ -320,6 +456,14 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
     setTapPosition({ x: e.clientX, y: e.clientY });
   };
   
+  // Determine current source URL to use
+  const getCurrentSource = () => {
+    if (attemptingFallback && currentSourceIndex > 0 && currentSourceIndex <= fallbackSources.length) {
+      return fallbackSources[currentSourceIndex - 1];
+    }
+    return src;
+  };
+  
   return (
     <motion.div 
       ref={playerRef}
@@ -330,7 +474,7 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
       onMouseMove={() => setShowControls(true)}
       onClick={handleTap}
     >
-      {loadError ? (
+      {loadError && !attemptingFallback ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white">
           <div className="text-center p-4">
             <h3 className="text-xl font-medium mb-2">Video Playback Error</h3>
@@ -351,7 +495,8 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
         </div>
       ) : null}
       
-      {src ? (
+      {/* Updated video element with multiple source options */}
+      {getCurrentSource() ? (
         <video
           ref={videoRef}
           className="w-full h-full object-contain"
@@ -365,9 +510,18 @@ const MoviePlayer = ({ src, title, poster }: MoviePlayerProps) => {
           onEnded={() => setIsPlaying(false)}
           poster={poster}
           preload="metadata"
-          key={src} // Important: Add key to force video element to re-render when src changes
+          key={getCurrentSource()} // Important: Add key to force video element to re-render when src changes
         >
-          <source src={src} type={sourceType || undefined} />
+          {/* Primary source */}
+          <source src={getCurrentSource()} type={sourceType || undefined} />
+          
+          {/* Show loading message while attempting fallbacks */}
+          {attemptingFallback && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+              <p>Trying alternative format...</p>
+            </div>
+          )}
+          
           Your browser does not support the video tag.
         </video>
       ) : (

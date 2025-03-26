@@ -17,6 +17,7 @@ import SearchPage from "./pages/SearchPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import DMCAPage from "./pages/DMCAPage";
+import UploadPage from "./pages/UploadPage";
 
 // Components & Layout
 import Layout from "./components/Layout";
@@ -79,6 +80,10 @@ const router = createBrowserRouter([
       {
         path: "/dmca",
         element: <DMCAPage />,
+      },
+      {
+        path: "/upload",
+        element: <UploadPage />,
       },
       {
         path: "*",
